@@ -1,0 +1,624 @@
+./PaxHeader/VMtranslator.java000644 000765 000024 00000000036 13721442216 021160 xustar00nadavsmacbookprostaff000000 000000 30 mtime=1598440590.825492967
+./VMtranslator.java000644 000765 000024 00000003435 13721442216 017215 0ustar00nadavsmacbookprostaff000000 000000 import java.io.File;
+import java.util.ArrayList;
+import java.util.Objects;
+
+/**
+ * main class
+ */
+public class VMtranslator {
+    public static void main(String[] args)
+    {
+        try
+        {
+            File file = new File(args[0]);
+            ArrayList<File> vmFiles = new ArrayList<>();
+
+            // in case we got a folder as an input
+            if (file.isDirectory())
+            {
+                for (File f : Objects.requireNonNull(file.listFiles()))
+                {
+                    if (f.getName().matches(".*\\.vm"))
+                        vmFiles.add(f);
+                }
+            }
+            else
+                vmFiles.add(file);
+
+            String fileName;
+            //todo - is the name of the output file is always like the folder's name?
+            if (vmFiles.size() > 1 || vmFiles.get(0).getName().equals("Sys.vm"))
+                fileName =  file.getAbsolutePath() + "/" + file.getName() + ".asm";
+            else
+                fileName = vmFiles.get(0).getAbsolutePath().replaceAll("\\.vm", "\\.asm");
+            File outputFile = new File(fileName); // create the output file
+            CodeWriter codeWriter = new CodeWriter(outputFile); // create the translator
+            if (vmFiles.size() > 1)
+                codeWriter.writeInit();
+
+            for (File f : vmFiles)
+            {
+                // set file name without extension
+                codeWriter.setFileName(f.getName().replaceAll("\\.vm", ""));
+                translatorFactory.translateFile(f, codeWriter);
+            }
+
+
+            codeWriter.Close();
+        }
+        // in case there is an exception (there shouldn't be according to the guidelines)
+        catch (Exception e)
+        {
+            System.err.println("There was a problem with the execution\n");
+        }
+    }
+}
+./PaxHeader/VMtranslator000644 000765 000024 00000000036 13720704056 020242 xustar00nadavsmacbookprostaff000000 000000 30 mtime=1598261294.026097497
+./VMtranslator000644 000765 000024 00000002117 13720704056 016273 0ustar00nadavsmacbookprostaff000000 000000 # **** Why do we need this file? ****
+# The purpose of this file is to run your project.
+# We want our users to have a simple API to run the Assembler, no matter the language
+# it was written in. So, we need a "wrapper" that will hide all language-specific details to do so,
+# thus enabling our users to simply type 'Assembler <path>' in order to use it.
+
+# **** What are '#!/bin/sh' and '$*'? ****
+# '$*' is a variable that holds all the arguments this file has received. So, if you
+# run "Assembler-java trout mask replica", $* will hold "trout mask replica".
+
+# **** What should I change in this file to make it work with my project? ****
+# IMPORTANT 1: The only two lines the file should contain are '#!/bin/sh' (which means that this file is a 
+# 			   script) and the command you use to run your project.
+# IMPORTANT 1: For this file to run when you call "Assembler", rename it from "Assembler-java" to "Assembler".
+# IMPORTANT 2: This file assumes that the main is contained in "Main.java".
+#			   If your main is contained elsewhere, you will need to change this.
+
+#!/bin/sh
+java VMtranslator $*./translatorFactory.java000644 000765 000024 00000003754 13721447203 020307 0ustar00nadavsmacbookprostaff000000 000000 import java.io.File;
+import java.io.FileNotFoundException;
+
+/**
+ *  factory class for different command types
+ */
+public class translatorFactory {
+    /**
+     * helper func to translate a line by it's command
+     * @param parser 
+     * @param codeWriter
+     */
+    private static void factory (Parser parser, CodeWriter codeWriter)
+    {
+        parser.advance();
+        commandTypes type = parser.commandType();
+        // arithmetic command
+        if (type == commandTypes.C_ARITHMETIC)
+            codeWriter.writeArithmetic(parser.arg1());
+            // push and pop command
+        else if (type == commandTypes.C_PUSH || type == commandTypes.C_POP)
+            codeWriter.WritePushPop(type, parser.segmentArg(), parser.arg2());
+            // label command
+        else if (type == commandTypes.C_LABEL)
+            codeWriter.writeLabel(parser.segmentArg());
+            // goto command
+        else if (type == commandTypes.C_GOTO)
+            codeWriter.writeGoto(parser.segmentArg());
+            // if command
+        else if (type == commandTypes.C_IF)
+            codeWriter.writeIf(parser.segmentArg());
+            // call command
+        else if (type == commandTypes.C_CALL)
+            codeWriter.writeCall(parser.segmentArg(), parser.arg2());
+            // return command
+        else if (type == commandTypes.C_RETURN)
+            codeWriter.writeReturn();
+            // function command
+        else if (type == commandTypes.C_FUNCTION)
+            codeWriter.writeFunction(parser.segmentArg(), parser.arg2());
+    }
+
+    /**
+     * main func
+     * @param inputFile - input file to translate
+     * @param codeWriter - code writer that will translate the input file into the output file
+     * @throws FileNotFoundException
+     */
+    public static void translateFile(File inputFile, CodeWriter codeWriter) throws FileNotFoundException {
+        Parser parser = new Parser(inputFile); // create the parser
+        while (parser.hasMoreCommands())
+            factory(parser, codeWriter);
+    }
+}
+./PaxHeader/README000644 000765 000024 00000000036 13721447234 016546 xustar00nadavsmacbookprostaff000000 000000 30 mtime=1598443164.704744497
+./README000644 000765 000024 00000001146 13721447234 014600 0ustar00nadavsmacbookprostaff000000 000000 nadav.alali, amitchen93
+===============================================================================
+Nadav Alali, ID 313549206, nadav.alali@mail.huji.ac.il
+Amit Chen, ID 308162502, amit.henhanina@mail.huji.ac.il
+===============================================================================
+
+                           Project 8 - An java File
+                           ----------------------- 
+  
+
+Submitted Files
+---------------
+README - This file.
+Makefile - for execute our java program
+VMtranslator.java - the execute file
+translatorFactory.java - update the output file based on EX7
+
+
+
+Remarks
+-------
+
+./PaxHeader/Parser.java000644 000765 000024 00000000036 13721165321 017757 xustar00nadavsmacbookprostaff000000 000000 30 mtime=1598352081.322544117
+./Parser.java000644 000765 000024 00000005143 13721165321 016012 0ustar00nadavsmacbookprostaff000000 000000 import java.io.File;
+import java.io.FileNotFoundException;
+import java.util.Scanner;
+
+/**
+ * Parser class
+ */
+public class Parser {
+    private Scanner _inputStream; // the file's stream
+    private String _currLine; // the curr line in the buffer
+
+    /**
+     * constructor
+     * @param _inputFile
+     * @throws FileNotFoundException
+     */
+    public Parser(File _inputFile) throws FileNotFoundException {
+        this._inputStream = new Scanner(_inputFile);
+        this._currLine = "";
+    }
+
+    /**
+     *
+     * @return - true id there is another command in the file, otherwise false.
+     */
+    boolean hasMoreCommands() {return _inputStream.hasNext(); }
+
+    /**
+     * Will advance to the next command
+     */
+    void advance() {
+        _currLine = _inputStream.nextLine();
+        cleanLine(); // clean line from comments and extra spaces and tabs.
+    }
+
+    /**
+     *
+     * @return - the command type fitting for the curr line.
+     */
+    commandTypes commandType()
+    {
+        switch (_currLine.split(" ")[0])
+        {
+            case "": // in case of an empty line or a comment line
+                return null;
+            case "pop":
+                return commandTypes.C_POP;
+            case "push":
+                return commandTypes.C_PUSH;
+            case "label":
+                return commandTypes.C_LABEL;
+            case "goto":
+                return commandTypes.C_GOTO;
+            case "if-goto":
+                return commandTypes.C_IF;
+            case "function":
+                return commandTypes.C_FUNCTION;
+            case "call":
+                return commandTypes.C_CALL;
+            case "return":
+                return commandTypes.C_RETURN;
+        }
+        return  commandTypes.C_ARITHMETIC;
+    }
+
+    /**
+     *
+     * @return - the command type name
+     */
+    String arg1() {return _currLine.split(" ")[0]; }
+
+    /**
+     *
+     * @return - the index arg
+     */
+    int arg2() {return Integer.parseInt(_currLine.split(" ")[2]); }
+
+    /**
+     *
+     * @return - the segment type
+     */
+    String segmentArg() {return _currLine.split(" ")[1]; }
+
+    /**
+     * cleans the line from spaces,tabs,comments...
+     */
+    private void cleanLine()
+    {
+        // clean line from comments
+        int commentIndex = _currLine.indexOf("/");
+        if (commentIndex != -1)
+            _currLine = _currLine.substring(0, commentIndex);
+
+        // clean spaces and tabs
+        _currLine = _currLine.replaceAll("\\s+", " ");
+
+        // remove space at the beginning
+        if (!_currLine.equals("") && _currLine.charAt(0) == ' ')
+            _currLine = _currLine.substring(1);
+    }
+}
+./PaxHeader/Makefile000644 000765 000024 00000000036 13721445566 017334 xustar00nadavsmacbookprostaff000000 000000 30 mtime=1598442358.323257943
+./Makefile000644 000765 000024 00000001436 13721445566 015370 0ustar00nadavsmacbookprostaff000000 000000 ###############################################################################
+#
+# Makefile for a Java project
+#
+###############################################################################
+
+# **** Beginning of the actual Makefile ****
+# The following line is a declaration of a variable named JAVAC:
+JAVAC=javac
+
+JAVACFLAGS=-encoding ISO-8859-1
+
+SRCS=*.java
+
+# The EXEC variable should include the name of the run file executable only.
+EXEC=VMtranslator
+
+# Let's define more variables that we'll use later on:
+TAR=tar
+TARFLAGS=cvf
+TARNAME=project8.tar
+TARSRCS=$(SRCS) $(EXEC) README Makefile
+
+# The "all" rule is what runs when you call "make":
+all: compile
+
+compile:
+	$(JAVAC) $(JAVACFLAGS) $(SRCS)
+	chmod +x $(EXEC)
+
+tar:
+	$(TAR) $(TARFLAGS) $(TARNAME) $(TARSRCS)
+
+clean:
+	rm -f *.class *~
+
+./PaxHeader/commandTypes.java000644 000765 000024 00000000036 13720506401 021163 xustar00nadavsmacbookprostaff000000 000000 30 mtime=1598196993.585164914
+./commandTypes.java000644 000765 000024 00000000250 13720506401 017210 0ustar00nadavsmacbookprostaff000000 000000 /**
+ * enum class for the different command types
+ */
+public enum commandTypes {
+    C_ARITHMETIC, C_PUSH, C_POP, C_LABEL, C_GOTO, C_IF, C_FUNCTION, C_RETURN, C_CALL
+}
+./PaxHeader/CodeWriter.java000644 000765 000024 00000000035 13721444643 020600 xustar00nadavsmacbookprostaff000000 000000 29 mtime=1598441891.89753089
+./CodeWriter.java000644 000765 000024 00000022757 13721444643 016646 0ustar00nadavsmacbookprostaff000000 000000 import java.io.*;
+
+/**
+ * A class that translates a
+ */
+public class CodeWriter {
+    private static final String  SP = "@SP\n";
+    private static final String  INCREASE_SP = SP + "M=M+1";
+    private static final String  DECREASE_SP = SP + "M=M-1";
+    private static final String  POINT_SP = SP + "A=M";
+    private static final String  PUSH = SP + "A=M" + "\nM=D\n" + INCREASE_SP;
+    private static final String  POP = DECREASE_SP + "\nA=M\n" + "D=M";
+    private PrintStream _outputFile; // printer for the output file
+    private int _positionCounter; // counts the boolean block fot the curr line
+    private String _fileName; // the output file name
+
+    /**
+     * constructor
+     * @param _outputFile
+     * @throws FileNotFoundException
+     */
+    public CodeWriter(File _outputFile) throws FileNotFoundException {
+        this._outputFile = new PrintStream(_outputFile);
+        _positionCounter = 0;
+    }
+
+    /**
+     * setter for the file name
+     * @param fileName - the file's name
+     */
+    public void setFileName(String fileName) {
+        _fileName = fileName;
+    }
+
+    /**
+     * a function that translate vm arithmetic command to an assembly language
+     * @param command - vm command to translate
+     */
+    public void writeArithmetic(String command) {
+        writeOnFile("// " + command + ": ");
+        if (!command.equals("not") && !command.equals("neg"))
+            writeOnFile(POP);
+        writeOnFile(DECREASE_SP);
+        writeOnFile(POINT_SP);
+        if (AssemblyDictionary.arithmeticCommands.containsKey(command))
+            writeOnFile(AssemblyDictionary.arithmeticCommands.get(command));
+        // in case of boolean arithmetic
+        else
+        {
+            // set label names for bool operator
+            String boolLabel = "@BOOL" + _positionCounter; // save the index to avoid collision
+            String boolLabelEnd = "@BOOL_END" + _positionCounter;
+
+            writeOnFile("D=M");
+            writeOnFile("// check overflow: ");
+            // avoid overflow - true case
+            writeOnFile("@ELSE_" + _positionCounter);
+            writeOnFile(AssemblyDictionary.booleanCommands.get("!" + command));
+            writeOnFile(INCREASE_SP);
+            writeOnFile(POINT_SP + "\nD=M");
+            writeOnFile(DECREASE_SP);
+            writeOnFile(POINT_SP);
+            writeOnFile("@NOT_OVERFLOW_" + _positionCounter);
+            writeOnFile(AssemblyDictionary.booleanCommands.get(command));
+            writeOnFile(POINT_SP + "\nM=-1");
+            writeOnFile(boolLabelEnd + "\n0;JMP");
+
+
+            // avoid overflow - false case
+            writeOnFile("(ELSE_" + _positionCounter +")");
+            writeOnFile(INCREASE_SP);
+            writeOnFile(POINT_SP + "\nD=M");
+            writeOnFile(DECREASE_SP);
+            writeOnFile(POINT_SP);
+            writeOnFile("@NOT_OVERFLOW_" + _positionCounter);
+            writeOnFile(AssemblyDictionary.booleanCommands.get("!" + command));
+            writeOnFile(POINT_SP + "\nM=0");
+            writeOnFile(boolLabelEnd + "\n0;JMP");
+
+            writeOnFile("// Not Overflow: ");
+            writeOnFile("(NOT_OVERFLOW_" + _positionCounter + ")");
+
+            writeOnFile(INCREASE_SP);
+            writeOnFile(POINT_SP + "\nD=M");
+            writeOnFile(DECREASE_SP);
+            writeOnFile(POINT_SP);
+            writeOnFile("D=M-D");
+            writeOnFile(boolLabel);
+            writeOnFile(AssemblyDictionary.booleanCommands.get(command));
+
+            // if false
+            writeOnFile(POINT_SP + "\nM=0");
+            writeOnFile(boolLabelEnd + "\n0;JMP");
+            writeOnFile("(" + boolLabel.substring(1) + ")");
+
+            // else if true
+            writeOnFile(POINT_SP + "\nM=-1");
+            writeOnFile("(" + boolLabelEnd.substring(1) + ")");
+            _positionCounter++;
+        }
+        writeOnFile(INCREASE_SP);
+    }
+
+    /**
+     * push or pop
+     * @param command - C_PUSH or C_POP
+     * @param segment - our target' i.e: argument/local/constant etc.
+     * @param index - the segment's index.
+     */
+    public void WritePushPop(commandTypes command, String segment, int index) {
+        writeOnFile("// " + command + " " + segment + " " +index +": ");
+        segmentToAddress(segment, index);
+        if (command == commandTypes.C_PUSH)
+            WritePush(segment);
+        // if pop
+        else
+        {
+            writeOnFile("D=A\n@R13\nM=D");
+            writeOnFile(POP);
+            writeOnFile("@R13\nA=M\nM=D");
+        }
+    }
+
+    /**
+     *  Writes assembly code that effects the VM initialization, also called bootstrap code.
+     *  This code must be placed at the beginning of the output file.
+     */
+    public void writeInit() {
+        writeOnFile("// Bootstrap");
+        writeOnFile("@256\nD=A\n@SP\nM=D");
+        writeCall("Sys.init", 0);
+    }
+
+    /**
+     *   Writes assembly code that effects the label command.
+     * @param label
+     */
+    public void writeLabel(String label) { writeOnFile("// Write Label\n(" + label + ")"); }
+
+    /**
+     *   Writes assembly code that effects the goto command.
+     * @param label
+     */
+    public void writeGoto(String label) {writeOnFile("// Write go to:\n@" + label + "\n0;JMP"); }
+
+    /**
+     *   Writes assembly code that effects the if-goto command.
+     * @param label
+     */
+    public void writeIf(String label) {writeOnFile( "// Write if:\n" + POP + "\n@" + label + "\nD;JNE"); }
+
+    /**
+     *  Writes assembly code that effects the function command.
+     * @param functionName
+     * @param numLocals
+     */
+    public void writeFunction(String functionName, int numLocals)
+    {
+        writeOnFile("// Write function\n(" + functionName + ")");
+        for (int i = 0; i < numLocals; i++)
+            writeOnFile("D=0\n" + PUSH);
+    }
+
+    /**
+     *  Writes assembly code that effects the call command.
+     * @param functionName
+     * @param numArgs
+     */
+    public void writeCall(String functionName, int numArgs)
+    {
+        writeOnFile("// Write function call:");
+        String funcReturnLabel = functionName + "_" + _positionCounter;
+        _positionCounter++;
+        writeOnFile("@" + funcReturnLabel + "\nD=A\n" + PUSH);
+
+        String[] memoryPositions = {"@LCL", "@ARG", "@THIS", "@THAT"};
+        for (String memoryPosition : memoryPositions)
+            writeOnFile(memoryPosition + "\nD=M\n" + PUSH);
+
+        // ARG = SP-n-5
+        //writeOnFile(SP + "D=M\n@ARG\nM=D-" + (numArgs + 5));
+        writeOnFile(SP + "D=M\n@" + (numArgs + 5) + "\nD=D-A\n@ARG\nM=D");
+
+        // LCL = SP
+        writeOnFile("@SP\nD=M\n@LCL\nM=D");
+
+        // Go to function
+        writeGoto(functionName);
+
+        //  Declare a label for the return-address
+        writeLabel(funcReturnLabel);
+    }
+
+    /**
+     *  Writes assembly code that effects the return command.
+     */
+    public void writeReturn()
+    {
+        writeOnFile("// Write return:");
+        // set FRAME and RET.
+        // we can use @R13-@R15 as helper registers to store the data
+        String FRAME = "R13", RET = "R14";
+
+        // FRAME = LCL
+        writeOnFile("@LCL\nD=M\n@" + FRAME + "\nM=D");
+
+        // RET = *(FRAME-5)
+        putFrameAddressInTemp(FRAME, RET, 5);
+
+        // *ARG = pop()
+        writeOnFile(POP + "\n@ARG\nA=M\nM=D");
+
+        // SP = ARG+1
+        writeOnFile("@ARG\nD=M\n@SP\nM=D+1");
+
+        //THAT = *(FRAME-1)
+        // THIS = *(FRAME-2)
+        // ARG = *(FRAME-3)
+        // LCL = *(FRAME-4)
+        String[] memoryPositions = {"THAT", "THIS", "ARG", "LCL"};
+        int index = 1;
+        for (String memoryPosition : memoryPositions)
+            putFrameAddressInTemp(FRAME, memoryPosition, index++);
+
+        // goto RET
+        writeOnFile("@" + RET + "\nA=M\n0;JMP");
+    }
+
+
+    // --------------------------------------  Private Methods ------------------------------------------------------//
+
+    /**
+     * a function that writes a push command in an assembly language.
+     * @param segment
+     */
+    private void WritePush(String segment) {
+        if (segment.equals("constant"))
+            writeOnFile("D=A\n" + PUSH);
+        else
+            writeOnFile("D=M\n" + PUSH);
+    }
+
+    /**
+     * a func that closes the stream.
+     */
+    public void Close() {_outputFile.close(); }
+
+    /**
+     * a funct that translate a segment to an assembly language
+     * @param segment - segment to translate
+     * @param index - index in the stack
+     */
+    private void segmentToAddress(String segment, int index) {
+        switch (segment)
+        {
+            case "constant":
+                writeOnFile("@" + index);
+                break;
+            case "static":
+                writeOnFile("@" + _fileName + "." + index);
+                break;
+            case "temp":
+                writeOnFile("@R" + (5 + index));
+                break;
+            case "pointer":
+                writeOnFile("@R" + (3 + index));
+                break;
+            default:
+                writeOnFile(AssemblyDictionary.segmentMap.get(segment) + "\nD=M");
+                writeOnFile("@" + index + "\nA=D+A");
+                break;
+        }
+    }
+
+    /**
+     * helper func that writes a command to the file via a printer stream
+     * @param command - command to write
+     */
+    private void writeOnFile(String command) { _outputFile.println(command); }
+
+    /**
+     *  Put the return-address in a temp. var.
+     *  i.e - RET = *(FRAME-5)
+     * @param index
+     */
+    private void putFrameAddressInTemp(String frame, String label, int index)
+    {
+        writeOnFile("@" + frame + "\nD=M");
+        writeOnFile("@" + index + "\nD=D-A\nA=D\nD=M");
+        writeOnFile("@" + label + "\nM=D");
+    }
+}
+./PaxHeader/AssemblyDictionary.java000644 000765 000024 00000000036 13721005570 022327 xustar00nadavsmacbookprostaff000000 000000 30 mtime=1598294904.670396749
+./AssemblyDictionary.java000644 000765 000024 00000001450 13721005570 020357 0ustar00nadavsmacbookprostaff000000 000000 import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * a dictionary for different commands.
+ */
+public interface AssemblyDictionary {
+    Map<String, String> arithmeticCommands = new HashMap<>()
+    {
+        {
+            put("add", "M=M+D"); put("sub", "M=M-D"); put("neg", "M=-M"); put("not", "M=!M"); put("and", "M=M&D");
+            put("or", "M=M|D");
+        }
+    };
+
+    Map<String, String> booleanCommands = new HashMap<>()
+    {
+        {
+            put("eq", "D;JEQ"); put("gt", "D;JGT"); put("lt", "D;JLT");
+            put("!eq", "D;JNE"); put("!gt", "D;JLE"); put("!lt", "D;JGE");
+        }
+    };
+
+    Map<String,String> segmentMap = new HashMap<>()
+    {
+        {
+            put("local", "@LCL"); put("argument", "@ARG"); put("this", "@THIS"); put("that", "@THAT");
+        }
+    };
+}
+
+

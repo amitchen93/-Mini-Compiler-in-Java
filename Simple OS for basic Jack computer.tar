@@ -1,0 +1,1147 @@
+./PaxHeader/Sys.jack000644 000765 000024 00000000036 13730411322 017263 xustar00nadavsmacbookprostaff000000 000000 30 mtime=1600262866.912276012
+./Sys.jack000644 000765 000024 00000003122 13730411322 015311 0ustar00nadavsmacbookprostaff000000 000000 // This file is part of www.nand2tetris.org
+// and the book "The Elements of Computing Systems"
+// by Nisan and Schocken, MIT Press.
+// File name: projects/12/Sys.jack
+
+/**
+ * A library that supports various program execution services.
+ */
+class Sys {
+    static int DELAY_FACTOR;
+
+    /** Performs all the initializations required by the OS. */
+    function void init() {
+        let DELAY_FACTOR = 150;
+        do Memory.init();
+        do Math.init(); //todo - go over the order
+        do Screen.init();
+        do Output.init();
+        do Keyboard.init();
+        do Main.main();
+        do Sys.halt();
+        return;
+    }
+
+    /** Halts the program execution. */
+    function void halt() {
+        //infinite loop
+        while (true){
+            // do nothing
+        }
+        return;
+    }
+
+    /** Waits approximately duration milliseconds and returns.  */
+    function void wait(int duration) {
+        while (duration > 0){
+            do Sys.delay();
+            let duration = duration - 1;
+        }
+        return;
+    }
+
+    /** helper function that delays by a delay factor */
+    function void delay(){
+        var int index;
+        let index = 0;
+        while (index < DELAY_FACTOR){
+            let index = index + 1;
+        }
+        return;
+    }
+
+    /** Displays the given error code in the form "ERR<errorCode>",
+     *  and halts the program's execution. */
+    function void error(int errorCode) {
+        do Output.printString("ERR");
+        do Output.printInt(errorCode);
+        do Sys.halt();
+        return;
+    }
+}
+./PaxHeader/String.jack000644 000765 000024 00000000036 13731413232 017756 xustar00nadavsmacbookprostaff000000 000000 30 mtime=1600525978.945912148
+./String.jack000644 000765 000024 00000011237 13731413232 016012 0ustar00nadavsmacbookprostaff000000 000000 // This file is part of www.nand2tetris.org
+// and the book "The Elements of Computing Systems"
+// by Nisan and Schocken, MIT Press.
+// File name: projects/12/String.jack
+
+/**
+ * Represents character strings. In addition for constructing and disposing
+ * strings, the class features methods for getting and setting individual
+ * characters of the string, for erasing the string's last character,
+ * for appending a character to the string's end, and more typical
+ * string-oriented operations.
+ */
+class String {
+    field Array charArray;
+    field int length, MaxLength;
+
+    /** constructs a new empty string with a maximum length of maxLength
+     *  and initial length of 0. */
+    constructor String new(int maxLength) {
+        let length = 0;
+        let MaxLength = Math.max(maxLength, 1); // there is no string of length 0
+        let charArray = Array.new(MaxLength);
+        return this;
+    }
+
+    /** Disposes this string. */
+    method void dispose() {
+        do charArray.dispose();
+        return;
+    }
+
+    /** Returns the current length of this string. */
+    method int length() {
+        return length;
+    }
+
+    /** Returns the character at the j-th location of this string. */
+    method char charAt(int j) {
+        if (validIndex(j)){
+            return charArray[j];
+        }
+        return 0; //non
+    }
+
+    /** Sets the character at the j-th location of this string to c. */
+    method void setCharAt(int j, char c) {
+        if (validIndex(j)){
+            let charArray[j] = c;
+        }
+        return;
+    }
+
+    /** Appends c to this string's end and returns this string. */
+    method String appendChar(char c) {
+        if (validIndex(length)){
+            let charArray[length] = c;
+            let length = length + 1;
+        }
+        return this;
+    }
+
+    /** Erases the last character from this string. */
+    method void eraseLastChar() {
+        if (validIndex(length - 1)){
+            let length = length - 1;
+        }
+        return;
+    }
+
+    /** Returns the integer value of this string, 
+     *  until a non-digit character is detected. */
+    method int intValue() {
+        var int v, i, d;
+        var boolean isNegative;
+        let isNegative = false;
+        let v = 0;
+        // first check if the num is negative
+        // according to ASCII table '-' = 45
+        if (charAt(0) = 45){
+            let isNegative = true;
+            let i = 1;
+        }
+        while (String.isInt(charArray[i])){
+            let d = String.charToInt(charArray[i]);
+            let v = (v * 10) + d;
+            let i = i + 1;
+        }
+        if (isNegative){
+            let v = -v;
+        }
+        return v;
+    }
+
+    /** Sets this string to hold a representation of the given value. */
+    method void setInt(int val) {
+        let length = 0; // overwrite existing string
+        if (val < 0){
+            do appendChar(45); // append '-' if negative
+            let val = -val;
+        }
+        do recursiveSetInt(val);
+        return;
+    }
+
+    // helper recursive method for set int to avoid rechecking that the number is positive or not */
+    method void recursiveSetInt(int val){
+        var char c;
+        var int lastDigit;
+
+        if (val < 10){
+            do appendChar(val + 48);
+        }
+        else{
+            let lastDigit = String.calcMod(val);
+            let c = String.intToChar(lastDigit);
+            do recursiveSetInt(val / 10);
+            do appendChar(c);
+        }
+        return;
+    }
+
+    /** Returns the new line character. */
+    function char newLine() {
+        return 128;
+    }
+
+    /** Returns the backspace character. */
+    function char backSpace() {
+        return 129;
+    }
+
+    /** Returns the double quote (") character. */
+    function char doubleQuote() {
+        return 34;
+    }
+
+    /** helper method to determine if an index is valid */
+    method boolean validIndex(int j){
+        if (~(j < MaxLength) | (j < 0)){
+            return false;
+        }
+        return true;
+    }
+
+    /** helper function to determine if a char is a integer char or not */
+    function boolean isInt(char c){
+        return ~((c < 48) | (c > 57));
+    }
+
+    /** helper function to convert a char to integer */
+    function int charToInt(char c){
+        return c - 48;
+    }
+
+    /** helper function to convert an integer to char */
+    function char intToChar(int num){
+        return num + 48;
+    }
+
+    /** helper function to calculate the modulo 10 of a number */
+    function int calcMod(int number){
+        var int n;
+        let n = number / 10;
+        return number - (n * 10);
+    }
+}
+./PaxHeader/Screen.jack000644 000765 000024 00000000036 13731410451 017727 xustar00nadavsmacbookprostaff000000 000000 30 mtime=1600524585.984978967
+./Screen.jack000644 000765 000024 00000012520 13731410451 015757 0ustar00nadavsmacbookprostaff000000 000000 // This file is part of www.nand2tetris.org
+// and the book "The Elements of Computing Systems"
+// by Nisan and Schocken, MIT Press.
+// File name: projects/12/Screen.jack
+
+/**
+ * A library of functions for displaying graphics on the screen.
+ * The Hack physical screen consists of 512 rows (indexed 0..511, top to bottom)
+ * of 256 pixels each (indexed 0..255, left to right). The top left pixel on 
+ * the screen is indexed (0,0).
+ */
+class Screen {
+    static Array screen, bitMap;
+    static boolean Color;
+    static int SCREEN_END;
+
+
+    /** Initializes the Screen. */
+    function void init() {
+        let SCREEN_END = 8192;
+        let Color = true; // black
+        let screen = 16384;
+        do Screen.clearScreen();
+
+        let bitMap = Array.new(16);
+        let bitMap[0] = 1;
+        let bitMap[1] = 2;
+        let bitMap[2] = 4;
+        let bitMap[3] = 8;
+        let bitMap[4] = 16;
+        let bitMap[5] = 32;
+        let bitMap[6] = 64;
+        let bitMap[7] = 128;
+        let bitMap[8] = 256;
+        let bitMap[9] = 512;
+        let bitMap[10] = 1024;
+        let bitMap[11] = 2048;
+        let bitMap[12] = 4096;
+        let bitMap[13] = 8192;
+        let bitMap[14] = 16384;
+        let bitMap[15] = 16384 + 16384;
+
+        return;
+    }
+
+    /** Erases the entire screen. */
+    function void clearScreen() {
+        var int index;
+        let index = 0;
+
+        while (index < SCREEN_END){
+            let screen[index] = false;
+            let index = index + 1;
+        }
+
+        return;
+    }
+
+    /** Sets the current color, to be used for all subsequent drawXXX commands.
+     *  Black is represented by true, white by false. */
+    function void setColor(boolean b) {
+        let Color = b;
+        return;
+    }
+
+    /** Draws the (x,y) pixel, using the current color. */
+    function void drawPixel(int x, int y) {
+        var int address, mask;
+        let address = (y * 32) + (x / 16);
+        let mask = bitMap[x & 15];
+
+        if (Color){
+            let screen[address] = screen[address] | mask;
+        }
+        else{
+            let screen[address] = screen[address] & ~mask;
+        }
+        return;
+    }
+
+    /** Draws a line from pixel (x1,y1) to pixel (x2,y2), using the current color. */
+    function void drawLine(int x1, int y1, int x2, int y2) {
+        if (y1 = y2){
+            do Screen.drawHorizontalLine(x1, y1, x2);
+            return;
+        }
+        // vertical line
+        if (x1 = x2){
+            do Screen.drawVerticalLine(y1, x1, y2);
+        }
+        // diagonal line
+        else{
+            do Screen.drawDiagonalLine(x1, x2, y1, y2);
+        }
+
+        return;
+    }
+
+    /** Draws horizontal line */
+    function void drawHorizontalLine(int x1, int y1, int x2){
+        var int index, x, dx;
+        let x = x1;
+        let dx = x2;
+        if (x1 > x2){
+            let x = x2;
+            let dx = x1;
+        }
+
+        while (~(x > dx)){
+            do Screen.drawPixel(x, y1);
+            let x = x + 1;
+        }
+        return;
+    }
+
+    /** Draws vertical line */
+    function void drawVerticalLine(int y1, int x1, int y2){
+    var int index, y, dy;
+        let y = y1;
+        let dy = y2;
+        if (y1 > y2){
+            let y = y2;
+            let dy = y1;
+        }
+
+        while (~(y > dy)){
+            do Screen.drawPixel(x1, y);
+            let y = y + 1;
+        }
+        return;
+    }
+
+    /** Draws diagonal line */
+    function void drawDiagonalLine(int x1, int x2, int y1, int y2){
+        var int x, y, dx, dy, a, b, diff, inc;
+        let a = 0;
+        let b = 0;
+        let diff = 0;
+        let x = x1;
+        let y = y1;
+        let dx = x2;
+        let dy = y2;
+        if (x > dx){
+            let x = x2;
+            let y = y2;
+            let dx = x1;
+            let dy = y1;
+        }
+        let dx = dx - x;
+        let dy = dy - y;
+        let inc = 1;
+        if (dy < 0){
+            let inc = -1;
+        }
+
+        while (~(a > dx) & (((inc = 1) & ~(b > dy)) | ((inc = -1) & ~(b < dy)))){
+            do Screen.drawPixel(x + a, y + b);
+            if (diff < 0){
+                let a = a + 1;
+                if (inc = -1){
+                    let diff = diff - dy;
+                }
+                else{
+                    let diff = diff + dy;
+                }
+            }
+            else{
+                let b = b + inc;
+                let diff = diff - dx;
+            }
+        }
+        return;
+    }
+
+
+    /** Draws a filled rectangle whose top left corner is (x1, y1)
+     * and bottom right corner is (x2,y2), using the current color. */
+    function void drawRectangle(int x1, int y1, int x2, int y2) {
+        while (~(y1 > y2)){
+            do Screen.drawHorizontalLine(x1, y1, x2);
+            let y1 = y1 + 1;
+        }
+        return;
+    }
+
+    /** Draws a filled circle of radius r<=181 around (x,y), using the current color. */
+    function void drawCircle(int x, int y, int r) {
+        var int dy, x1, x2, powerR;
+        let dy = -r;
+        let powerR = r * r;
+
+        while (~(dy > r)){
+            let x1 = Math.sqrt(powerR - (dy * dy));
+            let x2 = y + dy;
+            do Screen.drawHorizontalLine(x - x1, x2, x + x1);
+            let dy = dy + 1;
+        }
+        return;
+    }
+
+}
+./PaxHeader/README000644 000765 000024 00000000033 13731461011 016531 xustar00nadavsmacbookprostaff000000 000000 27 mtime=1600545289.854329
+./README000644 000765 000024 00000002103 13731461011 014560 0ustar00nadavsmacbookprostaff000000 000000 nadav.alali, amitchen93
+===============================================================================
+Nadav Alali, ID 313549206, nadav.alali@mail.huji.ac.il
+Amit Chen, ID 308162502, amit.henhanina@mail.huji.ac.il
+===============================================================================
+
+                           Project 12 -  OS
+                           ----------------------- 
+  
+
+Submitted Files - all of the files have explanation and comments
+---------------
+README - This file.
+Array.jack - array class that supports creating and disposing arrays
+Keyboard.jack - keyboard class that handles input from the user
+Math.jack - math class that calculates different operations
+Memory.jack - memory class that supports alloc and dealloc
+Output.jack - output class that support printing stuff onto the screen
+String.jack - string class that handles string operations
+Sys.jack - class that initiates the other class
+Screen.jack - a class that supports actions such as drawing to the screen
+
+Remarks
+-------
+
+* in math class there was a need to stop also when y < 0 due to overflow
+./PaxHeader/Output.jack000644 000765 000024 00000000036 13731445631 020020 xustar00nadavsmacbookprostaff000000 000000 30 mtime=1600539545.826140492
+./Output.jack000644 000765 000024 00000030242 13731445631 016051 0ustar00nadavsmacbookprostaff000000 000000 // This file is part of www.nand2tetris.org
+// and the book "The Elements of Computing Systems"
+// by Nisan and Schocken, MIT Press.
+// File name: projects/12/Output.jack
+
+/**
+ * A library of functions for writing text on the screen.
+ * The Hack physical screen consists of 512 rows of 256 pixels each.
+ * The library uses a fixed font, in which each character is displayed
+ * within a frame which is 11 pixels high (including 1 pixel for inter-line
+ * spacing) and 8 pixels wide (including 2 pixels for inter-character spacing).
+ * The resulting grid accommodates 23 rows (indexed 0..22, top to bottom)
+ * of 64 characters each (indexed 0..63, left to right). The top left
+ * character position on the screen is indexed (0,0). A cursor, implemented
+ * as a small filled square, indicates where the next character will be displayed.
+ */
+class Output {
+
+    // Character map for displaying characters
+    static Array charMaps;
+    static int row, col; // cursors
+    static Array screen;
+    static boolean deleteChar;
+
+
+    /** Initializes the screen, and locates the cursor at the screen's top-left. */
+    function void init() {
+        let deleteChar = false;
+        let row = 0;
+        let col = 0;
+        let screen = 16384;
+        do Output.initMap();
+        return;
+    }
+
+    // Initializes the character map array
+    function void initMap() {
+        var int i;
+
+        let charMaps = Array.new(127);
+
+        // Black square, used for displaying non-printable characters.
+        do Output.create(0,63,63,63,63,63,63,63,63,63,0,0);
+
+        // Assigns the bitmap for each character in the charachter set.
+        // The first parameter is the character index, the next 11 numbers
+        // are the values of each row in the frame that represents this character.
+        do Output.create(32,0,0,0,0,0,0,0,0,0,0,0);          //
+        do Output.create(33,12,30,30,30,12,12,0,12,12,0,0);  // !
+        do Output.create(34,54,54,20,0,0,0,0,0,0,0,0);       // "
+        do Output.create(35,0,18,18,63,18,18,63,18,18,0,0);  // #
+        do Output.create(36,12,30,51,3,30,48,51,30,12,12,0); // $
+        do Output.create(37,0,0,35,51,24,12,6,51,49,0,0);    // %
+        do Output.create(38,12,30,30,12,54,27,27,27,54,0,0); // &
+        do Output.create(39,12,12,6,0,0,0,0,0,0,0,0);        // '
+        do Output.create(40,24,12,6,6,6,6,6,12,24,0,0);      // (
+        do Output.create(41,6,12,24,24,24,24,24,12,6,0,0);   // )
+        do Output.create(42,0,0,0,51,30,63,30,51,0,0,0);     // *
+        do Output.create(43,0,0,0,12,12,63,12,12,0,0,0);     // +
+        do Output.create(44,0,0,0,0,0,0,0,12,12,6,0);        // ,
+        do Output.create(45,0,0,0,0,0,63,0,0,0,0,0);         // -
+        do Output.create(46,0,0,0,0,0,0,0,12,12,0,0);        // .
+        do Output.create(47,0,0,32,48,24,12,6,3,1,0,0);      // /
+
+        do Output.create(48,12,30,51,51,51,51,51,30,12,0,0); // 0
+        do Output.create(49,12,14,15,12,12,12,12,12,63,0,0); // 1
+        do Output.create(50,30,51,48,24,12,6,3,51,63,0,0);   // 2
+        do Output.create(51,30,51,48,48,28,48,48,51,30,0,0); // 3
+        do Output.create(52,16,24,28,26,25,63,24,24,60,0,0); // 4
+        do Output.create(53,63,3,3,31,48,48,48,51,30,0,0);   // 5
+        do Output.create(54,28,6,3,3,31,51,51,51,30,0,0);    // 6
+        do Output.create(55,63,49,48,48,24,12,12,12,12,0,0); // 7
+        do Output.create(56,30,51,51,51,30,51,51,51,30,0,0); // 8
+        do Output.create(57,30,51,51,51,62,48,48,24,14,0,0); // 9
+
+        do Output.create(58,0,0,12,12,0,0,12,12,0,0,0);      // :
+        do Output.create(59,0,0,12,12,0,0,12,12,6,0,0);      // ;
+        do Output.create(60,0,0,24,12,6,3,6,12,24,0,0);      // <
+        do Output.create(61,0,0,0,63,0,0,63,0,0,0,0);        // =
+        do Output.create(62,0,0,3,6,12,24,12,6,3,0,0);       // >
+        do Output.create(64,30,51,51,59,59,59,27,3,30,0,0);  // @
+        do Output.create(63,30,51,51,24,12,12,0,12,12,0,0);  // ?
+
+        do Output.create(65,12,30,51,51,63,51,51,51,51,0,0);          // A ** TO BE FILLED **
+        do Output.create(66,31,51,51,51,31,51,51,51,31,0,0); // B
+        do Output.create(67,28,54,35,3,3,3,35,54,28,0,0);    // C
+        do Output.create(68,15,27,51,51,51,51,51,27,15,0,0); // D
+        do Output.create(69,63,51,35,11,15,11,35,51,63,0,0); // E
+        do Output.create(70,63,51,35,11,15,11,3,3,3,0,0);    // F
+        do Output.create(71,28,54,35,3,59,51,51,54,44,0,0);  // G
+        do Output.create(72,51,51,51,51,63,51,51,51,51,0,0); // H
+        do Output.create(73,30,12,12,12,12,12,12,12,30,0,0); // I
+        do Output.create(74,60,24,24,24,24,24,27,27,14,0,0); // J
+        do Output.create(75,51,51,51,27,15,27,51,51,51,0,0); // K
+        do Output.create(76,3,3,3,3,3,3,35,51,63,0,0);       // L
+        do Output.create(77,33,51,63,63,51,51,51,51,51,0,0); // M
+        do Output.create(78,51,51,55,55,63,59,59,51,51,0,0); // N
+        do Output.create(79,30,51,51,51,51,51,51,51,30,0,0); // O
+        do Output.create(80,31,51,51,51,31,3,3,3,3,0,0);     // P
+        do Output.create(81,30,51,51,51,51,51,63,59,30,48,0);// Q
+        do Output.create(82,31,51,51,51,31,27,51,51,51,0,0); // R
+        do Output.create(83,30,51,51,6,28,48,51,51,30,0,0);  // S
+        do Output.create(84,63,63,45,12,12,12,12,12,30,0,0); // T
+        do Output.create(85,51,51,51,51,51,51,51,51,30,0,0); // U
+        do Output.create(86,51,51,51,51,51,30,30,12,12,0,0); // V
+        do Output.create(87,51,51,51,51,51,63,63,63,18,0,0); // W
+        do Output.create(88,51,51,30,30,12,30,30,51,51,0,0); // X
+        do Output.create(89,51,51,51,51,30,12,12,12,30,0,0); // Y
+        do Output.create(90,63,51,49,24,12,6,35,51,63,0,0);  // Z
+
+        do Output.create(91,30,6,6,6,6,6,6,6,30,0,0);          // [
+        do Output.create(92,0,0,1,3,6,12,24,48,32,0,0);        // \
+        do Output.create(93,30,24,24,24,24,24,24,24,30,0,0);   // ]
+        do Output.create(94,8,28,54,0,0,0,0,0,0,0,0);          // ^
+        do Output.create(95,0,0,0,0,0,0,0,0,0,63,0);           // _
+        do Output.create(96,6,12,24,0,0,0,0,0,0,0,0);          // `
+
+        do Output.create(97,0,0,0,14,24,30,27,27,54,0,0);      // a
+        do Output.create(98,3,3,3,15,27,51,51,51,30,0,0);      // b
+        do Output.create(99,0,0,0,30,51,3,3,51,30,0,0);        // c
+        do Output.create(100,48,48,48,60,54,51,51,51,30,0,0);  // d
+        do Output.create(101,0,0,0,30,51,63,3,51,30,0,0);      // e
+        do Output.create(102,28,54,38,6,15,6,6,6,15,0,0);      // f
+        do Output.create(103,0,0,30,51,51,51,62,48,51,30,0);   // g
+        do Output.create(104,3,3,3,27,55,51,51,51,51,0,0);     // h
+        do Output.create(105,12,12,0,14,12,12,12,12,30,0,0);   // i
+        do Output.create(106,48,48,0,56,48,48,48,48,51,30,0);  // j
+        do Output.create(107,3,3,3,51,27,15,15,27,51,0,0);     // k
+        do Output.create(108,14,12,12,12,12,12,12,12,30,0,0);  // l
+        do Output.create(109,0,0,0,29,63,43,43,43,43,0,0);     // m
+        do Output.create(110,0,0,0,29,51,51,51,51,51,0,0);     // n
+        do Output.create(111,0,0,0,30,51,51,51,51,30,0,0);     // o
+        do Output.create(112,0,0,0,30,51,51,51,31,3,3,0);      // p
+        do Output.create(113,0,0,0,30,51,51,51,62,48,48,0);    // q
+        do Output.create(114,0,0,0,29,55,51,3,3,7,0,0);        // r
+        do Output.create(115,0,0,0,30,51,6,24,51,30,0,0);      // s
+        do Output.create(116,4,6,6,15,6,6,6,54,28,0,0);        // t
+        do Output.create(117,0,0,0,27,27,27,27,27,54,0,0);     // u
+        do Output.create(118,0,0,0,51,51,51,51,30,12,0,0);     // v
+        do Output.create(119,0,0,0,51,51,51,63,63,18,0,0);     // w
+        do Output.create(120,0,0,0,51,30,12,12,30,51,0,0);     // x
+        do Output.create(121,0,0,0,51,51,51,62,48,24,15,0);    // y
+        do Output.create(122,0,0,0,63,27,12,6,51,63,0,0);      // z
+
+        do Output.create(123,56,12,12,12,7,12,12,12,56,0,0);   // {
+        do Output.create(124,12,12,12,12,12,12,12,12,12,0,0);  // |
+        do Output.create(125,7,12,12,12,56,12,12,12,7,0,0);    // }
+        do Output.create(126,38,45,25,0,0,0,0,0,0,0,0);        // ~
+
+	return;
+    }
+
+    // Creates the character map array of the given character index, using the given values.
+    function void create(int index, int a, int b, int c, int d, int e,
+                         int f, int g, int h, int i, int j, int k) {
+	var Array map;
+
+	let map = Array.new(11);
+        let charMaps[index] = map;
+
+        let map[0] = a;
+        let map[1] = b;
+        let map[2] = c;
+        let map[3] = d;
+        let map[4] = e;
+        let map[5] = f;
+        let map[6] = g;
+        let map[7] = h;
+        let map[8] = i;
+        let map[9] = j;
+        let map[10] = k;
+
+        return;
+    }
+
+    // Returns the character map (array of size 11) of the given character.
+    // If the given character is invalid or non-printable, returns the
+    // character map of a black square.
+    function Array getMap(char c) {
+        if ((c < 32) | (c > 126)) {
+            let c = 0;
+        }
+        return charMaps[c];
+    }
+
+    /** Moves the cursor to the j-th column of the i-th row,
+     *  and erases the character displayed there. */
+    function void moveCursor(int i, int j) {
+        let col = j;
+        let row = i;
+        return;
+    }
+
+    /** Displays the given character at the cursor location,
+     *  and advances the cursor one column forward. */
+    function void printChar(char c) {
+        var Array map;
+        var int index, mask, address, bitmap, align, alignLeft;
+
+        if (c = 128 ){ // new line
+            do Output.println();
+            return;
+        }
+        if (c = 129){ // backspace
+            do Output.backSpace();
+            return;
+        }
+
+        let map = Output.getMap(c);
+        let index = 0;
+        let mask = col & 1;
+        // 352 because 11 * 32 = 352, the same way we implemented screen
+        // col / 2 because 8 * 1/16 = 1/2.
+        let address = (row * 352) + (col / 2);
+        let align = 255;
+        let alignLeft = 1;
+        if (mask = 1){
+            let alignLeft = 256;
+            let align = -1 & 255;
+        }
+
+
+        while (index < 11){
+            if ((deleteChar) & (mask = 0) ){
+                let screen[address] = 0;
+            }
+            else{
+                let bitmap = map[index] * alignLeft;
+                let screen[address] = screen[address] & align | bitmap;
+            }
+            let address = address + 32;
+            let index = index + 1;
+        }
+
+        if (col = 63){
+            do Output.println(); // in case we stepped into end-line
+        }
+        else{
+            let col = col + 1; // move the cursor to the right
+        }
+        return;
+    }
+
+    /** displays the given string starting at the cursor location,
+     *  and advances the cursor appropriately. */
+    function void printString(String s) {
+        var int index;
+        let index = 0;
+        while (index < s.length()){
+            do Output.printChar(s.charAt(index));
+            let index = index + 1;
+        }
+        return;
+    }
+
+    /** Displays the given integer starting at the cursor location,
+     *  and advances the cursor appropriately. */
+    function void printInt(int i) {
+        var String str;
+        let str = String.new(16);
+        do str.setInt(i);
+        do Output.printString(str);
+        do str.dispose();
+        return;
+    }
+
+    /** Advances the cursor to the beginning of the next line. */
+    function void println() {
+       let col = 0;
+       let row = row + 1;
+       if (~(row < 23)){
+            let row = 0;
+       }
+       return;
+    }
+
+    /** Moves the cursor one column back. */
+    function void backSpace() {
+        if (col = 0){ // move the cursor to the upper row and to the last col
+            if (~(row = 0)){
+                let col = 63;
+                let row = row - 1;
+            }
+        }
+        if (col > 0){
+            let col = col - 1;
+        }
+        let deleteChar = true;
+        do Output.printChar(32); //print space
+        let deleteChar = false;
+        let col = col - 1;
+        return;
+    }
+
+}
+./PaxHeader/Memory.jack000644 000765 000024 00000000036 13731451215 017763 xustar00nadavsmacbookprostaff000000 000000 30 mtime=1600541325.968374531
+./Memory.jack000644 000765 000024 00000007104 13731451215 016015 0ustar00nadavsmacbookprostaff000000 000000 // This file is part of www.nand2tetris.org
+// and the book "The Elements of Computing Systems"
+// by Nisan and Schocken, MIT Press.
+// File name: projects/12/Memory.jack
+
+/**
+ * This library provides two services: direct access to the computer's main
+ * memory (RAM), and allocation and recycling of memory blocks. The Hack RAM
+ * consists of 32,768 words, each holding a 16-bit binary number.
+ */ 
+class Memory {
+    static Array memory, freeList;
+    static int heapLength, heapBase;
+    static int LENGTH, NEXT; // magic numbers
+
+    /** Initializes the class. */
+    function void init() {
+        var Array heap;
+        let heapBase = 2048; // heap starting point
+        let heapLength = 16384 - heapBase; // set the heap's length
+        let memory = 0; // initialize the memory to starting point
+        let heap = heapBase; // initialize the heap to starting point
+        let LENGTH = 0;
+        let NEXT = 1;
+
+        // initialize the freeList
+        let freeList = heap;
+        let freeList[LENGTH] = heapBase;
+        let freeList[NEXT] = null; // next value
+        return;
+    }
+
+    /** Returns the RAM value at the given address. */
+    function int peek(int address) {
+        return memory[address];
+
+    }
+
+    /** Sets the RAM value at the given address to the given value. */
+    function void poke(int address, int value) {
+        let memory[address] = value;
+        return;
+    }
+
+    /** Finds an available RAM block of the given size and returns
+     *  a reference to its base address. */
+    function int alloc(int size) {
+        var Array block;
+
+        // before calling bestFit check if the next block is free
+        let block = freeList;
+        if (~(block[NEXT] = null)){
+            let block = Memory.bestFit(size);
+        }
+
+        // if the block was not found, try defragmentation
+        if (~(block = null)){
+            let block = Memory.defragmentation(block, size);
+        }
+        return block;
+    }
+
+    /** helper function that implements best-fit heuristic */
+    function Array bestFit(int size){
+        var Array block, bestBlock;
+        var int curSize, bestSize;
+
+        let block = freeList;
+        let bestBlock = null;
+        let bestSize = heapLength; // set as max length
+
+        while (~(block = null)){
+            let curSize = block[LENGTH] - 1;
+            if (~(curSize < size) & (curSize < bestSize)){
+                let bestSize = curSize;
+                let bestBlock = block;
+            }
+            let block = block[NEXT]; //get next block
+        }
+        return bestBlock; // will return null if not found
+    }
+
+    /** helper function for defragmentation */
+    function Array defragmentation(Array block, int size){
+        var Array tmpBlock, returnBlock;
+        let returnBlock = block + 1;
+
+        if (block[LENGTH] > (size + 3)){
+            let tmpBlock = block + size + 1;
+            let tmpBlock[LENGTH] = block[LENGTH] - size - 1;
+            let tmpBlock[NEXT] = block[NEXT];
+            let returnBlock[-1] = size + 1;
+            let freeList = tmpBlock;
+        }
+        else {
+            let tmpBlock = block[NEXT];
+            let returnBlock[-1] = block[LENGTH];
+        }
+        return returnBlock;
+    }
+
+    /** De-allocates the given object (cast as an array) by making
+     *  it available for future allocations. */
+    function void deAlloc(Array o) {
+        let freeList[o] = freeList[o-1];
+        let freeList[o+1] = freeList[heapBase + 1];
+        let freeList[heapBase + 1] = o;
+        return;
+    }    
+}
+./PaxHeader/Math.jack000644 000765 000024 00000000035 13731456637 017420 xustar00nadavsmacbookprostaff000000 000000 29 mtime=1600544159.44662326
+./Math.jack000644 000765 000024 00000010307 13731456637 015452 0ustar00nadavsmacbookprostaff000000 000000 // This file is part of www.nand2tetris.org
+// and the book "The Elements of Computing Systems"
+// by Nisan and Schocken, MIT Press.
+// File name: projects/12/Math.jack
+
+/**
+ * A library of commonly used mathematical functions.
+ * Note: Jack compilers implement multiplication and division using OS method calls.
+ */
+class Math {
+    // bit array
+    static Array bitArr;
+    static int recentDivide;
+
+    /** Initializes the library. */
+    function void init() {
+        let bitArr = Array.new(8);
+        let bitArr[0] = 1;
+        let bitArr[1] = 2;
+        let bitArr[2] = 4;
+        let bitArr[3] = 8;
+        let bitArr[4] = 16;
+        let bitArr[5] = 32;
+        let bitArr[6] = 64;
+        let bitArr[7] = 128;
+        return;
+    }
+
+    /** Returns the absolute value of x. */
+    function int abs(int x) {
+        if (x < 0){
+            return -x;
+        }
+        return x;
+    }
+
+    /** Returns the product of x and y.
+     *  When a Jack compiler detects the multiplication operator '*' in the
+     *  program's code, it handles it by invoking this method. In other words,
+     *  the Jack expressions x*y and multiply(x,y) return the same value.
+     */
+    function int multiply(int x, int y) {
+        var int sum, shiftedX, j, bit;
+
+        // first check some basic cases:
+        if (x = 0 | y = 0){
+            return 0;
+        }
+        if (x = 1){
+            return y;
+        }
+        if (y = 1){
+            return x;
+        }
+
+        let bit = 1;
+        let sum = 0;
+        let shiftedX = x;
+        let j = 0;
+
+        while (j < 16){
+            // check if the j'th bit is 1 or not
+            if (~((bit & y) = 0)){
+                let sum = sum + shiftedX;
+            }
+            let shiftedX = shiftedX + shiftedX;
+            let j = j + 1;
+            let bit = bit + bit;
+        }
+        return sum;
+    }
+
+    /** Returns the integer part of x/y.
+     *  When a Jack compiler detects the multiplication operator '/' in the
+     *  program's code, it handles it by invoking this method. In other words,
+     *  the Jack expressions x/y and divide(x,y) return the same value.
+     */
+    function int divide(int x, int y) {
+        var int q;
+
+        //support negatives
+        var boolean isNegative; // indicates if the result should be negative or no
+        let isNegative = false; // default
+        if ((x < 0 & y > 0) | (x > 0 & y < 0)){
+            let isNegative = true;
+        }
+        let x = Math.abs(x);
+        let y = Math.abs(y);
+        let recentDivide = 0;
+        let q = Math.recursiveDivide(x, y);
+
+        if (isNegative){
+            let q = -q;
+        }
+
+        return q;
+    }
+
+    /** helper function for recursive divide */
+    function int recursiveDivide(int x, int y){
+        var int q;
+        // y < 0 to check if overflow
+        if ((y > x) | (y < 0)){
+            return 0;
+        }
+
+        let q = Math.recursiveDivide(x, y + y);
+        let q = q + q;
+
+        if (~((x - recentDivide) < y)){
+            let q = q + 1;
+            let recentDivide = recentDivide + y;
+        }
+        return q;
+    }
+
+    /** Returns the integer part of the square root of x. */
+    function int sqrt(int x) {
+        var int y, j, helper, bit;
+        let j = 7; // (16 / 2) - 1 = 7
+        let y = 0;
+
+        while (~(j < 0)){
+            let bit = bitArr[j];
+            let helper = y + bit;
+            let helper = helper * helper;
+            // first check if helper > 0 to avoid overflow
+            // this is because if helper < 0 that means that we passed the 16 bits while multiplying,
+            // or even before that.
+            if ((helper > 0) & ~(helper > x)){
+                let y = y + bit;
+            }
+            let j = j - 1;
+        }
+        return y;
+    }
+
+    /** Returns the greater number. */
+    function int max(int a, int b) {
+        if (a > b){
+            return a;
+        }
+        else{
+            return b;
+        }
+    }
+
+    /** Returns the smaller number. */
+    function int min(int a, int b) {
+        if (a > b){
+            return b;
+        }
+        else{
+            return a;
+        }
+    }
+}
+./PaxHeader/Keyboard.jack000644 000765 000024 00000000036 13727141515 020257 xustar00nadavsmacbookprostaff000000 000000 30 mtime=1599914829.102231355
+./Keyboard.jack000644 000765 000024 00000006054 13727141515 016314 0ustar00nadavsmacbookprostaff000000 000000 // This file is part of www.nand2tetris.org
+// and the book "The Elements of Computing Systems"
+// by Nisan and Schocken, MIT Press.
+// File name: projects/12/Keyboard.jack
+
+/**
+ * A library for handling user input from the keyboard.
+ */
+class Keyboard {
+    static Array kbd;
+    static int MAX_LINE_LENGTH;
+
+    /** Initializes the keyboard. */
+    function void init() {
+        let kbd = 24576;
+        let MAX_LINE_LENGTH = 64; // by the instructions
+        return;
+    }
+
+    /**
+     * Returns the character of the currently pressed key on the keyboard;
+     * if no key is currently pressed, returns 0.
+     *
+     * Recognizes all ASCII characters, as well as the following keys:
+     * new line = 128 = String.newline()
+     * backspace = 129 = String.backspace()
+     * left arrow = 130
+     * up arrow = 131
+     * right arrow = 132
+     * down arrow = 133
+     * home = 134
+     * End = 135
+     * page up = 136
+     * page down = 137
+     * insert = 138
+     * delete = 139
+     * ESC = 140
+     * F1 - F12 = 141 - 152
+     */
+    function char keyPressed() {
+        return kbd[0];
+    }
+
+    /**
+     * Waits until a key is pressed on the keyboard and released,
+     * then echoes the key to the screen, and returns the character
+     * of the pressed key.
+     */
+    function char readChar() {
+        var char key;
+        // wait until the user press a key
+        while (Keyboard.keyPressed() = 0) {}
+        let key = Keyboard.keyPressed(); // get key after pressed
+        //wait until the user stop pressing the key
+        while (~(Keyboard.keyPressed() = 0)) {}
+        do Output.printChar(key); // print the key
+        return key;
+    }
+
+    /**
+     * Displays the message on the screen, reads from the keyboard the entered
+     * text until a newline character is detected, echoes the text to the screen,
+     * and returns its value. Also handles user backspaces.
+     */
+    function String readLine(String message) {
+        var String msg;
+        var char key;
+        let msg = String.new(MAX_LINE_LENGTH);
+        do Output.printString(message); // display the message
+
+        //get first key
+        let key = Keyboard.readChar();
+        while (~(key = 128)){ // stop on a newline
+            // if we get backspace than delete the last char from the string
+            if (key = 129){
+                do msg.eraseLastChar();
+            }
+            else{
+                do msg.appendChar(key);
+            }
+            let key = Keyboard.readChar();
+        }
+        return msg;
+    }   
+
+    /**								
+     * Displays the message on the screen, reads from the keyboard the entered
+     * text until a newline character is detected, echoes the text to the screen,
+     * and returns its integer value (until the first non-digit character in the
+     * entered text is detected). Also handles user backspaces. 
+     */
+    function int readInt(String message) {
+        var String msg;
+        let msg = Keyboard.readLine(message);
+        return msg.intValue();
+    }
+}
+./PaxHeader/Array.jack000644 000765 000024 00000000036 13727135726 017604 xustar00nadavsmacbookprostaff000000 000000 30 mtime=1599912918.693948148
+./Array.jack000644 000765 000024 00000001414 13727135726 015634 0ustar00nadavsmacbookprostaff000000 000000 // This file is part of www.nand2tetris.org
+// and the book "The Elements of Computing Systems"
+// by Nisan and Schocken, MIT Press.
+// File name: projects/12/Array.jack
+
+/**
+ * Represents an array.
+ * In the Jack language, arrays are instances of the Array class.
+ * Once declared, the array entries can be accessed using the usual
+ * syntax arr[i]. Each array entry can hold a primitive data type as 
+ * well as any object type. Different array entries can have different 
+ * data types.
+ */
+class Array {
+    /** Constructs a new Array of the given size. */
+    function Array new(int size) {
+        return Memory.alloc(size);
+    }
+
+    /** Disposes this array. */
+    method void dispose() {
+        do Memory.deAlloc(this);
+        return;
+    }
+}

@@ -1,0 +1,1297 @@
+./VMWriter.java000644 000765 000024 00000005235 13724753266 016315 0ustar00nadavsmacbookprostaff000000 000000 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.PrintWriter;
+
+/**
+ * This class writes VM commands into a file.
+ * It encapsulates the VM command syntax.
+ */
+class VMWriter implements JackDictionary {
+    private PrintWriter printWriter;
+
+    /**
+     * Creates a new file and prepares it for writing VM commands
+     * @param outputFile
+     */
+    VMWriter(File outputFile) throws FileNotFoundException {
+        printWriter = new PrintWriter(outputFile);
+    }
+
+    /**
+     * Writes a VM push command
+     * @param segment - push to this segment
+     * @param index - push this index
+     */
+    void writePush(segmentEnum segment, int index){
+        printWriter.println("push " + segmentMap.get(segment) + " " + index);
+        printWriter.flush();
+    }
+
+    /**
+     * Writes a VM pop command
+     * @param segment - pop to this segment
+     * @param index - pop this index
+     */
+    void writePop(segmentEnum segment, int index){
+        printWriter.println("pop " + segmentMap.get(segment) + " " + index);
+        printWriter.flush();
+    }
+
+    /**
+     * Writes a VM arithmetic command
+     * @param command - command to write
+     */
+    void writeArithmetic(commandsEnum command){
+        printWriter.println(command.toString().toLowerCase());
+        printWriter.flush();
+    }
+
+    /**
+     * Writes a VM label command
+     * @param label - label to write
+     */
+    void writeLabel(String label){
+        printWriter.println("label " + label);
+        printWriter.flush();
+    }
+
+    /**
+     * Writes a VM  go-to label command
+     * @param label - go to this label
+     */
+    void writeGoTo(String label){
+        printWriter.println("goto " + label);
+        printWriter.flush();
+    }
+
+    /**
+     * Writes a VM If-goto command
+     * @param label - if label
+     */
+    void writeIf(String label){
+        printWriter.println("if-goto " + label);
+        printWriter.flush();
+    }
+
+    /**
+     * Writes a VM Call command
+     * @param name - call this
+     * @param nArgs - num of args
+     */
+    void writeCall(String name, int nArgs){
+        printWriter.println("call " + name + " " + nArgs);
+        printWriter.flush();
+    }
+
+    /**
+     * Writes a VM a Function command
+     * @param name - function name
+     * @param nLocals - num of params
+     */
+    void writeFunction(String name, int nLocals){
+        printWriter.println("function " + name + " " + nLocals);
+        printWriter.flush();
+    }
+
+    /**
+     * Writes a VM Return command
+     */
+    void writeReturn(){
+        printWriter.println("return");
+        printWriter.flush();
+    }
+
+    /**
+     * Closes the output file
+     */
+    void close(){
+        printWriter.close();
+    }
+
+}
+./PaxHeader/tokenTypes.java000644 000765 000024 00000000036 13723447547 020707 xustar00nadavsmacbookprostaff000000 000000 30 mtime=1598967655.331597306
+./tokenTypes.java000644 000765 000024 00000000214 13723447547 016734 0ustar00nadavsmacbookprostaff000000 000000 /**
+ * enum class for different token types
+ */
+public enum tokenTypes {
+    keyword, symbol, identifier, integerConstant, stringConstant
+}
+./SymbolTable.java000644 000765 000024 00000013300 13724750403 016771 0ustar00nadavsmacbookprostaff000000 000000 import java.util.Hashtable;
+
+/**
+ * This module provides services for creating, populating, and using a symbol table. Recall that each symbol has a scope
+ * from which it is visible in the source code. In the symbol table, each symbol is given a running number (index)
+ * within the scope, where the index starts at 0 and is reset when starting a new scope
+ */
+public class SymbolTable {
+    /**
+     * nested class representing a variable
+     */
+    private class variable{
+        private String type;
+        private keyWords kind;
+        private int index;
+
+        /**
+         * constructor
+         * @param type - variable type
+         * @param kind - variable kind
+         * @param index - variable index
+         */
+        variable(String type, keyWords kind, int index) {
+            this.type = type;
+            this.kind = kind;
+            this.index = index;
+        }
+    }
+
+    // class table
+    private Hashtable<String, variable> staticVars; // STATIC
+    private Hashtable<String, variable> fieldVars; // FIELD
+
+    // subroutine - scope table
+    private Hashtable<String, variable> argumentVars; // ARGS
+    private Hashtable<String, variable> localVar; // VAR
+
+    // boolean var that indicates if the scope is a subroutine scope or a class scope
+    private boolean isClassScope;
+
+    /**
+     * constructor - Creates a new empty symbol table
+     */
+    SymbolTable() {
+        staticVars = new Hashtable<>();
+        fieldVars= new Hashtable<>();
+        argumentVars = new Hashtable<>();
+        localVar = new Hashtable<>();
+        isClassScope = true;
+    }
+
+    /**
+     * Starts a new subroutine scope (i.e. erases all names in the previous subroutine’s scope.)
+     */
+    void startSubroutine(){
+        argumentVars.clear();
+        localVar.clear();
+        isClassScope = true;
+    }
+
+    /**
+     * Defines a new identifier of a given name, type, and kind and assigns it a running index. STATIC and FIELD
+     * identifiers have a class scope, while ARG and VAR identifiers have a subroutine scope.
+     * @param name - given name
+     * @param type - given type (int, String ...)
+     * @param kind - STATIC, FIELD, ARG, or VAR
+     */
+    void define(String name, String type, keyWords kind){
+        switch (kind){
+            case STATIC:
+                int index = staticVars.size();
+                staticVars.put(name, new variable(type, kind, index));
+                break;
+            case FIELD:
+                index = fieldVars.size();
+                fieldVars.put(name, new variable(type, kind, index));
+                break;
+            case ARG:
+                isClassScope = false; // from class scope to subroutine scope
+                index = argumentVars.size();
+                argumentVars.put(name, new variable(type, kind, index));
+                break;
+            case VAR:
+                isClassScope = false;
+                index = localVar.size();
+                localVar.put(name, new variable(type, kind, index));
+                break;
+        }
+    }
+
+    /**
+     *
+     * @param kind - STATIC, FIELD, ARG, or VAR
+     * @return - Returns the number of variables of the given kind already defined in the current scope.
+     */
+    int varCount(keyWords kind){
+        switch (kind){
+            case STATIC:
+                return staticVars.size();
+            case FIELD:
+                return fieldVars.size();
+            case ARG:
+                return argumentVars.size();
+            case VAR:
+                return localVar.size();
+        }
+        return 0; // shouldn't come here
+    }
+
+    /**
+     *
+     * @param name - var name
+     * @return - Returns the kind of the named identifier in the current scope. Returns NONE if the identifier is
+     * unknown in the current scope.
+     */
+    keyWords kindOf(String name){
+        variable var = getVariable(name);
+        return var == null ? null : var.kind;
+    }
+
+    /**
+     *
+     * @param name - var name
+     * @return - Returns the type of the named identifier in the current scope.
+     */
+    String typeOf(String name){
+        variable var = getVariable(name);
+        return var == null ? null : var.type;
+    }
+
+    /**
+     *
+     * @param name - var name
+     * @return - Returns the index assigned to named identifier.
+     */
+    int indexOf(String name){
+        variable var = getVariable(name);
+        return var == null ? -1 : var.index;
+    }
+
+    /**
+     *
+     * @param name - variable name
+     * @return - Returns the variable of the named identifier in the current scope.
+     */
+    variable getVariable(String name){
+        variable var;
+        // if in class scope
+        if (isClassScope)
+            var =  getClassVar(name);
+
+        // else if in subroutine scope
+        else
+        {
+            var = getSubroutineVar(name);
+            var = (var == null) ? getClassVar(name) : var;
+        }
+        return var;
+    }
+
+    /**
+     * a function that extract a variable of type 'Static' or 'Field' by  its name
+     * @param name - the name of the variable
+     * @return - the variable's object, if not exists will return null.
+     */
+    private variable getClassVar(String name){
+        if (staticVars.containsKey(name))
+            return staticVars.get(name);
+        return fieldVars.get(name); // will return null if there is no such a variable
+    }
+
+    /**
+     * a function that extract a variable of type 'Arg' or 'Local' by  its name
+     * @param name - the name of the variable
+     * @return - the variable's object, if not exists will return null.
+     */
+    private variable getSubroutineVar(String name){
+        if (argumentVars.containsKey(name)) {
+            return argumentVars.get(name);
+        }
+        return localVar.get(name); // will return null if there is no such a variable
+    }
+
+}
+./segmentEnum.java000644 000765 000024 00000000162 13724143007 017041 0ustar00nadavsmacbookprostaff000000 000000 /**
+ * enum for segments
+ */
+public enum segmentEnum {
+    CONST, ARG, LOCAL, STATIC, THIS, THAT, POINTER, TEMP
+}
+./PaxHeader/README000644 000765 000024 00000000036 13724757666 016566 xustar00nadavsmacbookprostaff000000 000000 30 mtime=1599332278.432237289
+./README000644 000765 000024 00000001724 13724757666 014622 0ustar00nadavsmacbookprostaff000000 000000 nadav.alali, amitchen93
+===============================================================================
+Nadav Alali, ID 313549206, nadav.alali@mail.huji.ac.il
+Amit Chen, ID 308162502, amit.henhanina@mail.huji.ac.il
+===============================================================================
+
+                           Project 11 -  java Files
+                           ----------------------- 
+  
+
+Submitted Files - all of the files have explanation and comments
+---------------
+README - This file.
+Makefile - for execute our java program
+JackCompiler.java - the execute file
+CompilationEngine.java -  class thst makes the compilation process
+JackDictionary.java - an interface dictionary for holds data from input file
+JackTokenizer.java - Tokenizer class of jack
+keyWords.java - Enum class for key Words
+tokenTypes - Enum class for token types
+SymbolTable - table of symbols
+segmentEnum - Enum class for segments
+commandsEnum -  Enum class for commands
+
+
+Remarks
+-------
+
+./PaxHeader/Makefile000644 000765 000024 00000000036 13724757666 017346 xustar00nadavsmacbookprostaff000000 000000 30 mtime=1599332278.435112516
+./Makefile000644 000765 000024 00000001437 13724757666 015403 0ustar00nadavsmacbookprostaff000000 000000 ###############################################################################
+#
+# Makefile for a Java project
+#
+###############################################################################
+
+# **** Beginning of the actual Makefile ****
+# The following line is a declaration of a variable named JAVAC:
+JAVAC=javac
+
+JAVACFLAGS=-encoding ISO-8859-1
+
+SRCS=*.java
+
+# The EXEC variable should include the name of the run file executable only.
+EXEC=JackCompiler
+
+# Let's define more variables that we'll use later on:
+TAR=tar
+TARFLAGS=cvf
+TARNAME=project11.tar
+TARSRCS=$(SRCS) $(EXEC) README Makefile
+
+# The "all" rule is what runs when you call "make":
+all: compile
+
+compile:
+	$(JAVAC) $(JAVACFLAGS) $(SRCS)
+	chmod +x $(EXEC)
+
+tar:
+	$(TAR) $(TARFLAGS) $(TARNAME) $(TARSRCS)
+
+clean:
+	rm -f *.class *~
+
+./PaxHeader/keyWords.java000644 000765 000024 00000000036 13724133710 020332 xustar00nadavsmacbookprostaff000000 000000 30 mtime=1599125448.715050768
+./keyWords.java000644 000765 000024 00000000334 13724133710 016362 0ustar00nadavsmacbookprostaff000000 000000 /**
+ * enums for different keywords
+ */
+public enum keyWords {
+    CLASS, method, function, constructor, INT, BOOLEAN, CHAR, VOID, VAR, STATIC, FIELD, LET, DO, IF, ELSE, WHILE,
+    RETURN, TRUE, FALSE, NULL, THIS, ARG
+}
+./PaxHeader/JackTokenizer.java000644 000765 000024 00000000036 13727162225 021274 xustar00nadavsmacbookprostaff000000 000000 30 mtime=1599923349.459919694
+./JackTokenizer.java000644 000765 000024 00000016444 13727162225 017335 0ustar00nadavsmacbookprostaff000000 000000 import java.io.File;
+import java.io.FileNotFoundException;
+import java.util.ArrayList;
+import java.util.Scanner;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+/**
+ * Removes all comments and white space from the input stream and breaks it into Jacklanguage
+ * tokens, as specified by the Jack grammar.
+ */
+public class JackTokenizer implements JackDictionary{
+    private Scanner _inputScanner; // scanner for the file
+    private ArrayList<String> _currLineDivided; // array which contains the curr line tokens
+    private int _currPosition; // curr position  in the "_currLineDivided"
+
+    /**
+     * Opens the input file/stream and gets ready to tokenize it
+     * @param inputFile
+     * @throws FileNotFoundException
+     */
+    public JackTokenizer(File inputFile) throws FileNotFoundException {
+        _inputScanner = new Scanner(inputFile);
+        _currLineDivided = new ArrayList<>();
+        _currPosition = 0;
+    }
+
+    /**
+     * do we have more tokens in the input?
+     * @return - true if we have more tokens, otherwise false.
+     */
+    public boolean hasMoreTokens() {
+        if (_currPosition >= _currLineDivided.size() - 1)
+            return _inputScanner.hasNext();
+        return true;
+    }
+
+    /**
+     * gets the next token from the input and makes it the current token.
+     * This method should only be called if hasMoreTokens() is true. Initially there is no current token.
+     */
+    public void advance() {
+        _currPosition++;
+        if (_currPosition >= _currLineDivided.size())
+            cleanLine(_inputScanner.nextLine());
+    }
+
+    /**
+     *
+     * @return - returns the type of the current token.
+     */
+    public tokenTypes tokenType(){
+        // return if the line is empty
+        if (_currLineDivided.isEmpty())
+            return null;
+
+        return returnType(_currLineDivided.get(_currPosition));
+    }
+
+    /**
+     *
+     * @return - returns the keyword which is the current token. Should be called only when tokenType() is KEYWORD.
+     */
+    public keyWords keyWord(){ return keywordMap.get(_currLineDivided.get(_currPosition)); }
+
+    /**
+     *
+     * @return - returns the character which is the current token. Should be called only when tokenType() is SYMBOL.
+     */
+    public char symbol() { return _currLineDivided.get(_currPosition).charAt(0); }
+
+    /**
+     *
+     * @return - returns the identifier which is the current token. Should be called only when tokenType() is IDENTIFIER
+     */
+    public String identifier() { return _currLineDivided.get(_currPosition); }
+
+    /**
+     *
+     * @return - returns the integer value of the current token. Should be called only when tokenType() is INT_CONST
+     */
+    public int intVal() { return Integer.parseInt(_currLineDivided.get(_currPosition )); }
+
+    /**
+     *
+     * @return - returns the string value of the current token, without the double quotes.
+     * Should be called only when tokenType() is STRING_CONST.
+     */
+    public String stringVal() {
+        String str = _currLineDivided.get(_currPosition);
+        return str.replaceAll("\"", "");
+    }
+
+
+    /**
+     * cleans a line from spaces and comments
+     * also, divides the line by tokens into the "_currLineDivided" array
+     * @param line - line to clean
+     */
+    private void cleanLine(String line)
+    {
+        _currLineDivided.clear(); // clear previous line
+        _currPosition = 0;
+       String cleanedLine = line;
+
+       // remove comments
+       if (isComment(line))
+           cleanedLine = handleComments(cleanedLine);
+
+        // separate line between comments
+        Pattern pattern = Pattern.compile("(\".*\")|([^\"]+)");
+        Matcher matcher = pattern.matcher(cleanedLine);
+
+        while (matcher.find())
+        {
+            if (matcher.group(1) != null)
+                _currLineDivided.add(matcher.group(1));
+            else
+            {
+                // clean line from spaces
+                String tmp = matcher.group(2).replaceAll("\\s+", " ");
+                // command shouldn't start with a white space
+                if (tmp.length() > 0 && tmp.charAt(0) == ' ')
+                    tmp = tmp.substring(1);
+                parseLine(tmp);
+            }
+        }
+    }
+
+    /**
+     * clean line from comments of type '*'
+     * @param line - line to clean
+     * @return - line without comments
+     */
+    private String cleanCommentLine(String line){
+        while (!line.contains("*/"))
+        {
+            line = _inputScanner.nextLine();
+        }
+
+        int index = line.indexOf("*/");
+        line = line.substring(index + 2); // +2 to skip comment
+        return line;
+    }
+
+    /**
+     * from line to tokens
+     * @param line - line to parse
+     */
+    private void parseLine(String line)
+    {
+        String[] noSpaces = line.split(" ");
+        for (String str : noSpaces)
+        {
+            int currPosition = 0;
+            for (int i = 0; i < str.length(); i++)
+            {
+
+                if (symbolsSet.contains(str.charAt(i)))
+                {
+                    if (currPosition != i)
+                        _currLineDivided.add(str.substring(currPosition, i));
+                    _currLineDivided.add("" + str.charAt(i));
+                    currPosition = i + 1;
+                }
+            }
+            // copy the rest
+            if (!str.substring(currPosition).isEmpty())
+                _currLineDivided.add(str.substring(currPosition));
+        }
+    }
+
+    /**
+     * gets the curr token
+     * @return
+     */
+    String getToken() { return _currLineDivided.get(_currPosition); }
+
+
+    /**
+     *
+     * @param token - token to check
+     * @return - the type of the curr token
+     */
+    private tokenTypes returnType(String token){
+        if (token.length() == 1 && symbolsSet.contains(token.charAt(0)) )
+            return tokenTypes.symbol;
+
+        else if (keywordMap.containsKey(token))
+            return tokenTypes.keyword;
+
+            // if const integer
+        else if (token.matches("\\d+"))
+            return tokenTypes.integerConstant;
+
+            // if const string
+        else if (token.matches("\".*\""))
+            return tokenTypes.stringConstant;
+
+        // else identifier
+        return tokenTypes.identifier;
+    }
+
+    /**
+     *
+     * @param line - line to clean from comments
+     * @return - a line without comments
+     */
+    private String handleComments(String line){
+        if (line.contains("/*")) {
+            while (line.contains("/*")) {
+                int index = line.indexOf("/*");
+                line = line.substring(0, index) + cleanCommentLine(line.substring(index));
+            }
+        }
+        // clean from comment
+        int commentIndex = line.indexOf("//");
+        if (commentIndex != -1)
+            line = line.substring(0, commentIndex);
+        return line;
+    }
+
+    /**
+     *
+     * @param line - line to check
+     * @return - true if there is a comment in the curr line, otherwise false.
+     */
+    private boolean isComment(String line){
+        int commentIndex = line.indexOf("/*");
+        commentIndex = (commentIndex == -1) ? line.indexOf("//") : commentIndex;
+
+        if (commentIndex == -1)
+            return false;
+
+        int stringIndex = line.indexOf("\"");
+        if (stringIndex > commentIndex)
+            return true;
+        stringIndex += line.substring(stringIndex + 1).indexOf("\"");
+        return stringIndex < commentIndex;
+    }
+}
+./PaxHeader/JackDictionary.java000644 000765 000024 00000000036 13724222272 021423 xustar00nadavsmacbookprostaff000000 000000 30 mtime=1599153338.213506547
+./JackDictionary.java000644 000765 000024 00000003762 13724222272 017463 0ustar00nadavsmacbookprostaff000000 000000 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Hashtable;
+import java.util.Map;
+
+/**
+ * dictionary for different tokens
+ */
+public interface JackDictionary {
+    // keywords map
+    Map<String, keyWords> keywordMap = new HashMap<>(){
+        {
+            // keywords
+            put("class", keyWords.CLASS); put("constructor", keyWords.constructor); put("function", keyWords.function);
+            put("method", keyWords.method); put("field", keyWords.FIELD); put("static", keyWords.STATIC);
+            put("var", keyWords.VAR); put("int", keyWords.INT); put("char", keyWords.CHAR);
+            put("boolean", keyWords.BOOLEAN); put("void", keyWords.VOID); put("true", keyWords.TRUE);
+            put("false", keyWords.FALSE); put("null", keyWords.NULL); put("this", keyWords.THIS);
+            put("let", keyWords.LET); put("do", keyWords.DO); put("if", keyWords.IF);
+            put("else", keyWords.ELSE); put("while", keyWords.WHILE); put("return", keyWords.RETURN);
+        }
+    };
+
+    // symbols map
+    HashSet<Character> symbolsSet = new HashSet<>(){
+        {
+            add('{'); add('}'); add('('); add(')'); add('['); add(']'); add('.'); add(','); add(';'); add('+'); add('-');
+            add('*'); add('/'); add('&'); add('|'); add('<'); add('>'); add('='); add('~');
+        }
+    };
+
+    // segments map
+    Hashtable<segmentEnum, String> segmentMap = new Hashtable<>(){
+        {
+            put(segmentEnum.CONST, "constant"); put(segmentEnum.ARG, "argument"); put(segmentEnum.LOCAL, "local");
+            put(segmentEnum.POINTER, "pointer"); put(segmentEnum.STATIC, "static"); put(segmentEnum.THAT, "that");
+            put(segmentEnum.THIS, "this"); put(segmentEnum.TEMP, "temp");
+        }
+    };
+
+    Hashtable<keyWords, segmentEnum> keyWords_to_segment = new Hashtable<>(){
+        {
+            put(keyWords.ARG, segmentEnum.ARG); put(keyWords.VAR, segmentEnum.LOCAL);
+            put(keyWords.STATIC, segmentEnum.STATIC); put(keyWords.FIELD, segmentEnum.THIS);
+        }
+    };
+
+}
+./PaxHeader/JackCompiler.java000644 000765 000024 00000000036 13724757666 021114 xustar00nadavsmacbookprostaff000000 000000 30 mtime=1599332278.437969569
+./JackCompiler.java000644 000765 000024 00000002037 13724757666 017146 0ustar00nadavsmacbookprostaff000000 000000 import java.io.File;
+import java.io.FileNotFoundException;
+import java.util.Objects;
+
+
+/**
+ * execution class
+ */
+public class JackCompiler {
+    public static void main (String[] args) throws FileNotFoundException {
+        File inputFile = new File(args[0]);
+        if (inputFile.isFile())
+            translate(inputFile);
+        else {
+            for (File file : Objects.requireNonNull(inputFile.listFiles())){
+                if (file.getName().contains(".jack")) // translate only jack files
+                    translate(file);
+            }
+        }
+
+    }
+
+    /**
+     * will translate a jack file.
+     * @param inputFile - file to translate
+     * @throws FileNotFoundException - in case the file is not exists
+     */
+    private static void translate(File inputFile) throws FileNotFoundException {
+        File outputFile = new File(inputFile.getAbsolutePath().replaceAll("\\.jack", "\\.vm"));
+        CompilationEngine compilationEngine = new CompilationEngine(inputFile, outputFile);
+        compilationEngine.CompileClass();
+    }
+}
+./PaxHeader/JackCompiler000644 000765 000024 00000000035 13724757666 020173 xustar00nadavsmacbookprostaff000000 000000 29 mtime=1599332278.42880126
+./JackCompiler000644 000765 000024 00000002117 13724757666 016225 0ustar00nadavsmacbookprostaff000000 000000 # **** Why do we need this file? ****
+# The purpose of this file is to run your project.
+# We want our users to have a simple API to run the Assembler, no matter the language
+# it was written in. So, we need a "wrapper" that will hide all language-specific details to do so,
+# thus enabling our users to simply type 'Assembler <path>' in order to use it.
+
+# **** What are '#!/bin/sh' and '$*'? ****
+# '$*' is a variable that holds all the arguments this file has received. So, if you
+# run "Assembler-java trout mask replica", $* will hold "trout mask replica".
+
+# **** What should I change in this file to make it work with my project? ****
+# IMPORTANT 1: The only two lines the file should contain are '#!/bin/sh' (which means that this file is a 
+# 			   script) and the command you use to run your project.
+# IMPORTANT 1: For this file to run when you call "Assembler", rename it from "Assembler-java" to "Assembler".
+# IMPORTANT 2: This file assumes that the main is contained in "Main.java".
+#			   If your main is contained elsewhere, you will need to change this.
+
+#!/bin/sh
+java JackCompiler $*./PaxHeader/CompilationEngine.java000644 000765 000024 00000000036 13724756742 022147 xustar00nadavsmacbookprostaff000000 000000 30 mtime=1599331810.263030046
+./CompilationEngine.java000644 000765 000024 00000044001 13724756742 020176 0ustar00nadavsmacbookprostaff000000 000000 import java.io.File;
+import java.io.FileNotFoundException;
+import java.util.HashSet;
+
+/**
+ * This module effects the actual compilation into XML form.
+ * It gets its input from a JackTokenizer and writes its parsed XML structure into an output file/stream.
+ * This is done by a series of compilexxx() methods, where xxx is a corresponding syntactic element of the Jack grammar.
+ * The contract between these methods is that each compilexxx() method should read the syntactic construct xxx from the
+ * input, advance() the tokenizer exactly beyond xxx, and output the XML parsing of xxx.
+ * Thus, compilexxx()may only be called if indeed xxx is the next syntactic element of the input.
+ */
+public class CompilationEngine extends SymbolTable implements JackDictionary {
+    private static HashSet<String> keywordConstant = new HashSet<>() {{add("true"); add("false"); add("null"); add("this");}};
+    private static HashSet<Character> unaryOp = new HashSet<>() {{add('-'); add('~');}};
+    private static HashSet<Character> op = new HashSet<>() {{add('+'); add('-'); add('*'); add('/'); add('&'); add('|');
+                                                          add('<'); add('>'); add('=');}};
+    private JackTokenizer _jackTokenizer;
+    private VMWriter vmWriter;
+    private String className;
+    private int ifCounter;
+    private int whileCounter;
+    private int numOfExpressions;
+
+    /**
+     * creates a new compilation engine with the given input and output. The next method called must be compileClass().
+     * @param inputFile - jack file to translate into vm file
+     * @param outputFile - vm file to write on
+     * @throws FileNotFoundException - in case the file does not exists
+     */
+    CompilationEngine(File inputFile, File outputFile) throws FileNotFoundException {
+        _jackTokenizer = new JackTokenizer(inputFile);
+        advance();
+        vmWriter = new VMWriter(outputFile);
+        className = "";
+        ifCounter = 0;
+        whileCounter = 0;
+        numOfExpressions = 0;
+    }
+
+    /**
+     * compiles a complete class.
+     */
+    void CompileClass(){
+        // initialize class
+        advance(); // get 'class'
+        className = _jackTokenizer.getToken();
+        advance(); // get class name
+        advance(); // get '{
+
+        // initialize field/static vars
+        VarDec();
+
+        //subroutine call
+        CompileSubroutine();
+
+        advance(); // get '}'
+        vmWriter.close();
+    }
+
+    /**
+     * a function that compiles a variables declaration
+     */
+    private void VarDec(){
+        while (_jackTokenizer.tokenType() == tokenTypes.keyword &&
+                (_jackTokenizer.keyWord() == keyWords.STATIC || _jackTokenizer.keyWord() == keyWords.FIELD
+                        || _jackTokenizer.keyWord() == keyWords.VAR))
+        {
+            CompileVarDec();
+        }
+    }
+
+    /**
+     * compiles a var declaration.
+     */
+    void CompileVarDec()
+    {
+        //advance();
+        keyWords kind = _jackTokenizer.keyWord();
+        advance(); // get type
+        String type = _jackTokenizer.getToken();
+        advance(); // get name
+
+        while (!(_jackTokenizer.tokenType() == tokenTypes.symbol && _jackTokenizer.symbol() == ';'))
+        {
+            define(_jackTokenizer.getToken(), type, kind);
+            advance(); // get ',' or ';'
+            if (_jackTokenizer.getToken().charAt(0) == ',')
+                advance(); // skip ','
+        }
+        // get ';'
+        advance();
+    }
+
+    /**
+     * compiles a complete method, function, or constructor.
+     */
+    void CompileSubroutine(){
+        while (_jackTokenizer.tokenType() == tokenTypes.keyword &&
+                (_jackTokenizer.keyWord() == keyWords.constructor || _jackTokenizer.keyWord() == keyWords.function
+                        || _jackTokenizer.keyWord() == keyWords.method)) {
+            startSubroutine();
+            subroutine();
+        }
+    }
+
+    /**
+     * compiles subroutine
+     */
+    private void subroutine()
+    {
+        keyWords kind = _jackTokenizer.keyWord();
+        advance(); // get kind - constructor or method or function
+        advance(); // get type - void or int ....
+        String name = _jackTokenizer.getToken();
+        advance(); // get subroutine name
+        advance(); // get '('
+        if (kind == keyWords.method)
+            define("this", className, keyWords.ARG);
+        // write param list
+        compileParameterList();
+        advance();// get ')'
+        advance(); // get '{'
+        VarDec();
+        vmWriter.writeFunction(className + "." + name, varCount(keyWords.VAR));
+        if (kind == keyWords.constructor)
+            writeConstructor();
+        else if (kind == keyWords.method)
+            writeMethod();
+        compileStatements();
+    }
+
+    /**
+     * compiles a (possibly empty) parameter list, not including the enclosing “()”.
+     */
+    public void compileParameterList()
+    {
+        while (!(_jackTokenizer.tokenType() == tokenTypes.symbol && _jackTokenizer.symbol() == ')'))
+        {
+            String type = _jackTokenizer.getToken();
+            advance(); // get name
+            String name = _jackTokenizer.getToken();
+            define(name, type, keyWords.ARG);
+            advance();
+            if (_jackTokenizer.getToken().charAt(0) == ',')
+                advance(); // skip ','
+        }
+    }
+
+    /**
+     * compiles a sequence of statements, not
+     * including the enclosing “{}”.
+     */
+    public void compileStatements(){
+        boolean flag = true;
+        while (flag && _jackTokenizer.tokenType() == tokenTypes.keyword)
+        {
+            keyWords key = _jackTokenizer.keyWord();
+            switch (key){
+                case IF:
+                    compileIf();
+                    break;
+                case DO:
+                    compileDo();
+                    break;
+                case LET:
+                    compileLet();
+                    break;
+                case WHILE:
+                    compileWhile();
+                    break;
+                case RETURN:
+                    compileReturn();
+                    break;
+                default:
+                    flag = false;
+                    break;
+            }
+        }
+        advance(); // get '}'
+    }
+
+    /**
+     * Compiles a do statement
+     */
+    void compileDo(){
+        advance(); // get 'do'
+        compileTerm();
+        advance(); // get ';'
+        vmWriter.writePop(segmentEnum.TEMP, 0);
+    }
+
+    /**
+     * Compiles a let call
+     */
+    void compileLet(){
+        advance(); // write 'let'
+        String name = _jackTokenizer.getToken();
+        advance(); // write 'varName'
+        if (_jackTokenizer.getToken().charAt(0) == '[') {
+            advance(); // write '=' or '(' or '['
+            CompileExpression();
+            advance(); // get ')' or ']' or '=' or ';'
+            //writeArray(name);
+            keyWords kind = kindOf(name);
+            int index = indexOf(name);
+            vmWriter.writePush(keyWords_to_segment.get(kind), index);
+            vmWriter.writeArithmetic(commandsEnum.ADD);
+            advance();
+            CompileExpression();
+            advance();
+
+            vmWriter.writePop(segmentEnum.TEMP, 0);
+            vmWriter.writePop(segmentEnum.POINTER, 1);
+            vmWriter.writePush(segmentEnum.TEMP, 0);
+            vmWriter.writePop(segmentEnum.THAT, 0);
+        }
+        else {
+            advance();
+            CompileExpression();
+            advance();
+            vmWriter.writePop(keyWords_to_segment.get(kindOf(name)), indexOf(name));
+        }
+    }
+
+    /**
+     * compiles if statement
+     */
+    void compileIf(){
+        advance(); // get 'if'
+        advance(); // get '('
+        CompileExpression();
+        advance(); // get ')'
+        advance(); // get '{'
+        String trueName = "IF_TRUE" + ifCounter;
+        String falseName = "IF_FALSE" + ifCounter;
+        String endName = "IF_END" + (ifCounter);
+        ifCounter++;
+        vmWriter.writeIf(trueName);
+        vmWriter.writeGoTo(falseName);
+        vmWriter.writeLabel(trueName);
+        compileStatements();
+        vmWriter.writeLabel(falseName);
+        if (_jackTokenizer.tokenType() == tokenTypes.keyword && _jackTokenizer.keyWord() == keyWords.ELSE)
+        {
+            vmWriter.writeGoTo(endName);
+            vmWriter.writeLabel(falseName);
+            advance();// get 'else'
+            advance();// get '{'
+            compileStatements();
+            vmWriter.writeLabel(endName);
+        }
+        else
+            vmWriter.writeLabel(falseName);
+    }
+
+    /**
+     * Compiles a while call
+     */
+    void compileWhile(){
+        advance(); // write 'while'
+        advance(); // write '('
+        String whileLabel = "WHILE_EXP" + whileCounter;
+        String whileEnd = "WHILE_END" + whileCounter;
+        whileCounter++;
+        vmWriter.writeLabel(whileLabel);
+        CompileExpression();
+        advance(); // write ')'
+        advance(); // write '{'
+        vmWriter.writeArithmetic(commandsEnum.NOT);
+        vmWriter.writeIf(whileEnd);
+        compileStatements();
+        vmWriter.writeGoTo(whileLabel);
+        vmWriter.writeLabel(whileEnd);
+    }
+
+    /**
+     * compiles an expression.
+     */
+    void CompileExpression(){
+        recursiveExpression();
+    }
+
+    /**
+     * call expression recursively
+     */
+    private void recursiveExpression(){
+        compileTerm();
+        if (_jackTokenizer.tokenType() == tokenTypes.symbol
+                && (_jackTokenizer.symbol() == ')' || _jackTokenizer.symbol() == ']' || _jackTokenizer.symbol() == ';'
+                   || _jackTokenizer.symbol() == ','))
+            return;
+        if (op.contains(_jackTokenizer.getToken().charAt(0))) {
+            char symbol = _jackTokenizer.symbol();
+            advance(); // get op
+            recursiveExpression();
+            writeSymbol(symbol);
+        }
+        else
+            recursiveExpression();
+
+    }
+
+    /**
+     * compiles term
+     */
+    void compileTerm() {
+        String token = _jackTokenizer.getToken();
+        tokenTypes tokenType = _jackTokenizer.tokenType();
+
+        if (tokenType == tokenTypes.identifier)
+            compileIdentifierExpression();
+        else if (keywordConstant.contains(token)|| tokenType == tokenTypes.stringConstant ||
+                tokenType == tokenTypes.integerConstant){
+                writeCommand();
+                advance();
+        }
+        else if (unaryOp.contains(token.charAt(0))){
+            char symbol = _jackTokenizer.symbol(); advance();
+            compileTerm();
+            writeUnaryOp(symbol);
+        }
+        else if (token.charAt(0) == '('){
+            advance(); // get '('
+            CompileExpression();
+            advance(); // get ')'
+        }
+    }
+
+
+    /**
+     * compiles an expression list.
+     */
+    void CompileExpressionList(){
+        int expressionsNum = 0;
+        if (_jackTokenizer.getToken().charAt(0) != ')') {
+            expressionsNum++;
+            CompileExpression();
+        }
+        while (_jackTokenizer.getToken().charAt(0) == ',')
+        {
+            advance(); // get ','
+            CompileExpression();
+            expressionsNum++;
+        }
+        numOfExpressions = expressionsNum;
+    }
+
+    /**
+     * compiles a return statement.
+     */
+    void compileReturn(){
+        advance(); // get return
+        String token = _jackTokenizer.getToken();
+        if (!(_jackTokenizer.tokenType() == tokenTypes.symbol && _jackTokenizer.symbol() == ';'))
+            CompileExpression();
+        else
+            vmWriter.writePush(segmentEnum.CONST, 0);
+        // void function
+        vmWriter.writeReturn();
+        advance(); // get ';'
+    }
+
+
+    /**
+     * writes a command based on the curr token
+     */
+    private void writeCommand()
+    {
+        // write tabs
+        tokenTypes type = _jackTokenizer.tokenType();
+        if (type == null)
+            return;
+        switch (type)
+        {
+            case symbol:
+                writeSymbol(_jackTokenizer.symbol());
+                break;
+            case identifier:
+                writeIdentifier(_jackTokenizer.getToken());
+                break;
+            case keyword:
+                writeKeyword();
+                break;
+            case stringConstant:
+                writeString();
+                break;
+            case integerConstant:
+                vmWriter.writePush(segmentEnum.CONST, Integer.parseInt(_jackTokenizer.getToken()));
+                break;
+        }
+    }
+
+    /**
+     * a function that translate an identifier expression from jack to vm
+     */
+    private void compileIdentifierExpression(){
+        String subroutineName = _jackTokenizer.getToken();
+        String name = _jackTokenizer.getToken(); advance();
+        String funcName = "";
+        boolean funcCall = false;
+        int argNum = 0;
+        String token = _jackTokenizer.getToken();
+        // a func call
+        if (token.charAt(0) == '.'){ // when (name).(subroutineName) ( expression/ expression list) ;
+            advance(); // get 'subroutine name'
+            funcName = _jackTokenizer.getToken(); advance();
+            // check if the variable is recognized in the block
+            if (getVariable(subroutineName) != null){
+                argNum++;
+                name = typeOf(subroutineName);
+                vmWriter.writePush(keyWords_to_segment.get(kindOf(subroutineName)), indexOf(subroutineName));
+            }
+            funcCall = true;
+            token = _jackTokenizer.getToken();
+        }
+        if (token.charAt(0) == '(') {
+            if (!funcCall) {
+                argNum++;
+                vmWriter.writePush(segmentEnum.POINTER, 0);
+            }
+            advance(); // get '('
+            numOfExpressions = 0;
+            CompileExpressionList();
+            argNum += numOfExpressions;
+            if (funcCall)
+                vmWriter.writeCall(name + "." + funcName, argNum);
+            else
+                vmWriter.writeCall(className + "." + name, argNum);
+            advance(); // get ')
+
+        }
+        // array call
+        else if (token.charAt(0) == '[') {
+            advance(); // get '['
+            CompileExpression();
+            advance(); // get ']'
+            writeArray(subroutineName);
+        }
+        // some identifier variable
+        else {
+            writeIdentifier(subroutineName); // push identifier, i.e push x
+        }
+    }
+
+    /**
+     * a dunction that writes an identifier variable
+     * for example - var int x; -> push local 0, when 0 is the index of x relative to its position in the function
+     * @param identifier - identifier to write
+     */
+    private void writeIdentifier(String identifier){
+        keyWords kind = kindOf(identifier);
+        if (kind != null)
+        {
+            int index = indexOf(identifier);
+            vmWriter.writePush(keyWords_to_segment.get(kind), index);
+        }
+    }
+
+    /**
+     * a function that writes an array
+     * @param name - name of the array object
+     */
+    private void writeArray(String name){
+        keyWords kind = kindOf(name);
+        int index = indexOf(name);
+        vmWriter.writePush(keyWords_to_segment.get(kind), index);
+        vmWriter.writeArithmetic(commandsEnum.ADD);
+        vmWriter.writePop(segmentEnum.POINTER, 1);
+        vmWriter.writePush(segmentEnum.THAT, 0);
+    }
+
+    /**
+     * a function that writes a keyword in vm language
+     */
+    private void writeKeyword(){
+        keyWords key = _jackTokenizer.keyWord();
+
+        if (key == keyWords.THIS)
+            vmWriter.writePush(segmentEnum.POINTER, 0);
+        else {
+            vmWriter.writePush(segmentEnum.CONST, 0);
+            if (key == keyWords.TRUE)
+                vmWriter.writeArithmetic(commandsEnum.NOT);
+        }
+
+
+    }
+
+    /**
+     * a function that translates and writes a string to vm language
+     */
+    private void writeString(){
+        String str = _jackTokenizer.stringVal();
+        vmWriter.writePush(segmentEnum.CONST, str.length());
+        vmWriter.writeCall("String.new", 1);
+        for (char c : str.toCharArray()){
+            vmWriter.writePush(segmentEnum.CONST, c);
+            vmWriter.writeCall("String.appendChar", 2);
+        }
+    }
+
+    /**
+     * a function that initiate a constructor
+     */
+    private void writeConstructor(){
+        vmWriter.writePush(segmentEnum.CONST, varCount(keyWords.FIELD));
+        vmWriter.writeCall("Memory.alloc", 1);
+        vmWriter.writePop(segmentEnum.POINTER, 0);
+    }
+
+    /**
+     * a function that initiate a method
+     */
+    private void writeMethod(){
+        vmWriter.writePush(segmentEnum.ARG, 0);
+        vmWriter.writePop(segmentEnum.POINTER, 0);
+    }
+
+    /**
+     * a function that writes an unary symbol from jack to vm
+     * @param symbol - unary op symbol to write
+     */
+    private void writeUnaryOp(char symbol){
+        if (symbol == '~')
+            vmWriter.writeArithmetic(commandsEnum.NOT);
+        else
+            vmWriter.writeArithmetic(commandsEnum.NEG);
+    }
+
+    /**
+     * a function that translate a symbol from jack to vm and writes it into the vm file
+     * @param symbol - symbol to write
+     */
+    private void  writeSymbol(char symbol){
+        if (symbol == '<')
+            vmWriter.writeArithmetic(commandsEnum.LT);
+        else if (symbol == '>')
+            vmWriter.writeArithmetic(commandsEnum.GT);
+        else if (symbol == '&')
+            vmWriter.writeArithmetic(commandsEnum.AND);
+        else if (symbol == '~')
+            vmWriter.writeArithmetic(commandsEnum.NOT);
+        else if (symbol == '+')
+            vmWriter.writeArithmetic(commandsEnum.ADD);
+        else if (symbol == '-')
+            vmWriter.writeArithmetic(commandsEnum.SUB);
+        else if (symbol == '=')
+            vmWriter.writeArithmetic(commandsEnum.EQ);
+        else if (symbol == '|')
+            vmWriter.writeArithmetic(commandsEnum.OR);
+        else if (symbol == '*')
+            vmWriter.writeCall("Math.multiply", 2);
+        else if (symbol == '/')
+            vmWriter.writeCall("Math.divide", 2);
+    }
+
+    /**
+     * a func that advances to the next token
+     */
+    private void advance(){
+        if (_jackTokenizer.hasMoreTokens())
+            _jackTokenizer.advance();
+        while (_jackTokenizer.tokenType() == null && _jackTokenizer.hasMoreTokens())
+            _jackTokenizer.advance();
+    }
+}
+./commandsEnum.java000644 000765 000024 00000000111 13724150350 017171 0ustar00nadavsmacbookprostaff000000 000000 public enum commandsEnum {
+    ADD, SUB, NEG, NOT, EQ, GT, LT, AND, OR
+}
